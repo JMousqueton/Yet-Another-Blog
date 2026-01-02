@@ -9,3 +9,5 @@ venv/
 .vscode/
 *.log
 blog.db.OLD
+/uploads/*.png
+/uploads/*.jpeg
