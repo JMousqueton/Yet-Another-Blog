@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin{% endblock %} - Blog Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --sidebar-bg: #2c3e50;
+            --sidebar-text: #ecf0f1;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 250px;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            padding: 1.5rem 0;
+            z-index: 1000;
+        }
+        
+        .sidebar-header {
+            padding: 0 1.5rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-header h4 {
+            color: var(--sidebar-text);
+            margin: 0;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 1rem 0;
+            margin: 0;
+        }
+        
+        .sidebar-menu li a {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-menu li a:hover,
+        .sidebar-menu li a.active {
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #3498db;
+            padding-left: calc(1.5rem - 4px);
+        }
+        
+        .sidebar-menu li a i {
+            margin-right: 0.75rem;
+            width: 20px;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        
+        .top-bar {
+            background: white;
+            padding: 1rem 2rem;
+            margin: -2rem -2rem 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+    {% block extra_styles %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h4><i class="fas fa-blog"></i> Blog Admin</h4>
+            <small class="sidebar-user-label">{{ session.user_name }}</small>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="{{ url_for('admin_dashboard') }}" {% if active_page == 'dashboard' %}class="active"{% endif %}><i class="fas fa-th-large"></i> Dashboard</a></li>
+            <li><a href="{{ url_for('admin_posts') }}" {% if active_page == 'posts' %}class="active"{% endif %}><i class="fas fa-file-alt"></i> Posts</a></li>
+            <li><a href="{{ url_for('admin_new_post') }}" {% if active_page == 'new_post' %}class="active"{% endif %}><i class="fas fa-plus-circle"></i> New Post</a></li>
+            <li><a href="{{ url_for('admin_authors') }}" {% if active_page == 'authors' %}class="active"{% endif %}><i class="fas fa-users"></i> Authors</a></li>
+            <li><a href="{{ url_for('admin_media') }}" {% if active_page == 'media' %}class="active"{% endif %}><i class="fas fa-image"></i> Media</a></li>
+            <li><a href="{{ url_for('admin_settings') }}" {% if active_page == 'settings' %}class="active"{% endif %}><i class="fas fa-cog"></i> Settings</a></li>
+        </ul>
+        <div style="position: absolute; bottom: 1rem; width: 100%; padding: 0 1.5rem;">
+            <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-light w-100">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <h2 class="mb-0">{% block page_header %}Admin{% endblock %}</h2>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

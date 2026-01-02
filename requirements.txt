@@ -1,0 +1,11 @@
+Flask==3.0.0
+Flask-Babel==4.0.0
+Flask-WTF==1.2.1
+Flask-Limiter==3.5.0
+feedgen==1.0.0
+python-dateutil==2.8.2
+APScheduler==3.10.4
+python-dotenv==1.0.0
+Pillow>=10.0.0
+Werkzeug>=3.0.0
+markdown>=3.5.0

@@ -1,0 +1,485 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'settings' %}
+
+{% block title %}Settings{% endblock %}
+
+{% block page_header %}<i class="fas fa-cog"></i> Settings{% endblock %}
+
+{% block extra_styles %}
+<style>
+.form-card {
+    background: white;
+    border-radius: 10px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-width: 1100px;
+}
+
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    flex: 1 1 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--primary-color);
+    border-bottom-color: #e9ecef;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: transparent;
+}
+
+.tab-content {
+    padding-top: 1.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.form-section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #007bff;
+}
+
+.form-section-title:first-child {
+    margin-top: 0;
+}
+
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.form-check {
+    padding: 0.5rem 0;
+}
+
+.form-check-input {
+    margin-top: 0.3rem;
+}
+
+.info-box {
+    background: #e7f3ff;
+    border-left: 4px solid #007bff;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Settings Form -->
+        <div class="form-card">
+            <form method="POST" action="{{ url_for('admin_settings') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <!-- Tabs Navigation -->
+                <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="blog-tab" data-bs-toggle="tab" data-bs-target="#blog" type="button" role="tab">
+                            <i class="fas fa-newspaper"></i> Blog Information
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab">
+                            <i class="fas fa-envelope"></i> Contact
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="social-tab" data-bs-toggle="tab" data-bs-target="#social" type="button" role="tab">
+                            <i class="fas fa-share-alt"></i> Social Media
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="display-tab" data-bs-toggle="tab" data-bs-target="#display" type="button" role="tab">
+                            <i class="fas fa-eye"></i> Display
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab">
+                            <i class="fas fa-chart-line"></i> Analytics
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="languages-tab" data-bs-toggle="tab" data-bs-target="#languages" type="button" role="tab">
+                            <i class="fas fa-globe"></i> Languages
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="template-tab" data-bs-toggle="tab" data-bs-target="#template" type="button" role="tab">
+                            <i class="fas fa-palette"></i> Template
+                        </button>
+                    </li>
+                </ul>
+                
+                <!-- Tabs Content -->
+                <div class="tab-content" id="settingsTabContent">
+                    <!-- Blog Information Tab -->
+                    <div class="tab-pane fade show active" id="blog" role="tabpanel">
+                        <div class="mb-3">
+                            <label for="blog_title" class="form-label">Blog Title</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="blog_title" 
+                                   name="blog_title" 
+                                   placeholder="My Awesome Blog"
+                                   value="{{ settings.get('blog_title', '') }}">
+                            <small class="form-text text-muted">The main title of your blog</small>
+                        </div>
+
+                        {% if settings.get('enabled_lang_en', 'on') == 'on' %}
+                        <div class="mb-4 p-3 border rounded">
+                            <h6 class="mb-3"><span class="flag">🇬🇧</span> English</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="blog_title_en" class="form-label">Title</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="blog_title_en" 
+                                           name="blog_title_en" 
+                                           placeholder="My Awesome Blog"
+                                           value="{{ settings.get('blog_title_en', '') }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="blog_subtitle_en" class="form-label">Subtitle</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="blog_subtitle_en" 
+                                           name="blog_subtitle_en" 
+                                           placeholder="Thoughts on technology, travel and life"
+                                           value="{{ settings.get('blog_subtitle_en', '') }}">
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label for="blog_description_en" class="form-label">Blog Description</label>
+                                <textarea class="form-control" 
+                                          id="blog_description_en" 
+                                          name="blog_description_en" 
+                                          placeholder="Describe your blog..."
+                                          maxlength="160">{{ settings.get('blog_description_en', '') }}</textarea>
+                                <small class="form-text text-muted">Used for SEO meta description (max 160 characters)</small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if settings.get('enabled_lang_fr', 'on') == 'on' %}
+                        <div class="mb-4 p-3 border rounded">
+                            <h6 class="mb-3"><span class="flag">🇫🇷</span> Français</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="blog_title_fr" class="form-label">Titre</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="blog_title_fr" 
+                                           name="blog_title_fr" 
+                                           placeholder="Mon blog génial"
+                                           value="{{ settings.get('blog_title_fr', '') }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="blog_subtitle_fr" class="form-label">Sous-titre</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="blog_subtitle_fr" 
+                                           name="blog_subtitle_fr" 
+                                           placeholder="Réflexions sur la technologie, les voyages et la vie"
+                                           value="{{ settings.get('blog_subtitle_fr', '') }}">
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label for="blog_description_fr" class="form-label">Description du blog</label>
+                                <textarea class="form-control" 
+                                          id="blog_description_fr" 
+                                          name="blog_description_fr" 
+                                          placeholder="Décrivez votre blog..."
+                                          maxlength="160">{{ settings.get('blog_description_fr', '') }}</textarea>
+                                <small class="form-text text-muted">Utilisé pour la méta description SEO (160 caractères max)</small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if settings.get('enabled_lang_de', 'on') == 'on' %}
+                        <div class="mb-4 p-3 border rounded">
+                            <h6 class="mb-3"><span class="flag">🇩🇪</span> Deutsch</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="blog_title_de" class="form-label">Titel</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="blog_title_de" 
+                                           name="blog_title_de" 
+                                           placeholder="Mein tolles Blog"
+                                           value="{{ settings.get('blog_title_de', '') }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="blog_subtitle_de" class="form-label">Untertitel</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="blog_subtitle_de" 
+                                           name="blog_subtitle_de" 
+                                           placeholder="Gedanken über Technologie, Reisen und Leben"
+                                           value="{{ settings.get('blog_subtitle_de', '') }}">
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label for="blog_description_de" class="form-label">Blogbeschreibung</label>
+                                <textarea class="form-control" 
+                                          id="blog_description_de" 
+                                          name="blog_description_de" 
+                                          placeholder="Beschreiben Sie Ihren Blog..."
+                                          maxlength="160">{{ settings.get('blog_description_de', '') }}</textarea>
+                                <small class="form-text text-muted">Für SEO-Meta-Beschreibung verwendet (max. 160 Zeichen)</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="blog_url" class="form-label">Blog URL</label>
+                            <input type="url" 
+                                   class="form-control" 
+                                   id="blog_url" 
+                                   name="blog_url" 
+                                   placeholder="https://yourblog.com"
+                                   value="{{ settings.get('blog_url', '') }}">
+                            <small class="form-text text-muted">The main URL of your blog</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="favicon" class="form-label">Favicon</label>
+                            {% if settings.get('favicon') %}
+                            <div style="margin-bottom: 1rem;">
+                                <img src="/static/{{ settings.get('favicon') }}" alt="Favicon" style="width: 32px; height: 32px; border: 1px solid #ddd; padding: 4px; border-radius: 4px;">
+                                <small class="form-text text-muted d-block mt-2">Current favicon</small>
+                            </div>
+                            {% endif %}
+                            <input type="file" 
+                                   class="form-control" 
+                                   id="favicon" 
+                                   name="favicon" 
+                                   accept=".ico,.png,.jpg,.jpeg">
+                            <small class="form-text text-muted">Upload a favicon (ICO, PNG, or JPG - will be resized to 32x32)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Information Tab -->
+                    <div class="tab-pane fade" id="contact" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="admin_email" class="form-label">Admin Email</label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="admin_email" 
+                                       name="admin_email" 
+                                       placeholder="admin@example.com"
+                                       value="{{ settings.get('admin_email', '') }}">
+                                <small class="form-text text-muted">Email for admin notifications</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="contact_email" class="form-label">Contact Email</label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="contact_email" 
+                                       name="contact_email" 
+                                       placeholder="contact@example.com"
+                                       value="{{ settings.get('contact_email', '') }}">
+                                <small class="form-text text-muted">Email for visitor inquiries</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Social Media Tab -->
+                    <div class="tab-pane fade" id="social" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="social_twitter" class="form-label"><i class="fab fa-twitter"></i> Twitter/X</label>
+                                <input type="url" 
+                                       class="form-control" 
+                                       id="social_twitter" 
+                                       name="social_twitter" 
+                                       placeholder="https://twitter.com/yourprofile"
+                                       value="{{ settings.get('social_twitter', '') }}">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="social_linkedin" class="form-label"><i class="fab fa-linkedin"></i> LinkedIn</label>
+                                <input type="url" 
+                                       class="form-control" 
+                                       id="social_linkedin" 
+                                       name="social_linkedin" 
+                                       placeholder="https://linkedin.com/company/yourcompany"
+                                       value="{{ settings.get('social_linkedin', '') }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="social_github" class="form-label"><i class="fab fa-github"></i> GitHub</label>
+                                <input type="url" 
+                                       class="form-control" 
+                                       id="social_github" 
+                                       name="social_github" 
+                                       placeholder="https://github.com/yourprofile"
+                                       value="{{ settings.get('social_github', '') }}">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="social_facebook" class="form-label"><i class="fab fa-facebook"></i> Facebook</label>
+                                <input type="url" 
+                                       class="form-control" 
+                                       id="social_facebook" 
+                                       name="social_facebook" 
+                                       placeholder="https://facebook.com/yourpage"
+                                       value="{{ settings.get('social_facebook', '') }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Display Settings Tab -->
+                    <div class="tab-pane fade" id="display" role="tabpanel">
+                        <div class="mb-3">
+                            <label for="items_per_page" class="form-label">Posts Per Page</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="items_per_page" 
+                                   name="items_per_page" 
+                                   min="1" 
+                                   max="50"
+                                   value="{{ settings.get('items_per_page', '10') }}">
+                            <small class="form-text text-muted">Number of posts to display per page (1-50)</small>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input type="checkbox" 
+                                   class="form-check-input" 
+                                   id="enable_comments" 
+                                   name="enable_comments"
+                                   {% if settings.get('enable_comments') == 'on' %}checked{% endif %}>
+                            <label class="form-check-label" for="enable_comments">
+                                <i class="fas fa-comments"></i> Enable Comments
+                            </label>
+                            <small class="form-text text-muted d-block mt-2">Allow visitors to leave comments on posts</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Analytics & Tracking Tab -->
+                    <div class="tab-pane fade" id="analytics" role="tabpanel">
+                        <div class="info-box">
+                            <i class="fas fa-info-circle"></i>
+                            Paste your Google Analytics or other tracking code here. It will be injected into the site footer.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="analytics_code" class="form-label">Tracking Code</label>
+                            <textarea class="form-control" 
+                                      id="analytics_code" 
+                                      name="analytics_code" 
+                                      placeholder="&lt;script&gt;...&lt;/script&gt;"
+                                      style="font-family: monospace; min-height: 200px;">{{ settings.get('analytics_code', '') }}</textarea>
+                            <small class="form-text text-muted">Paste tracking scripts here (Google Analytics, etc.)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Languages Tab -->
+                    <div class="tab-pane fade" id="languages" role="tabpanel">
+                        <div class="info-box">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Enable Languages</strong><br>
+                            Select which languages should be available on your blog. At least one language must be enabled.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Available Languages</label>
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="enabled_lang_en" 
+                                       name="enabled_lang_en" 
+                                       value="on"
+                                       {% if settings.get('enabled_lang_en', 'on') == 'on' %}checked{% endif %}>
+                                <label class="form-check-label" for="enabled_lang_en">
+                                    🇬🇧 <strong>English</strong>
+                                </label>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="enabled_lang_fr" 
+                                       name="enabled_lang_fr" 
+                                       value="on"
+                                       {% if settings.get('enabled_lang_fr', 'on') == 'on' %}checked{% endif %}>
+                                <label class="form-check-label" for="enabled_lang_fr">
+                                    🇫🇷 <strong>Français</strong> (French)
+                                </label>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="enabled_lang_de" 
+                                       name="enabled_lang_de" 
+                                       value="on"
+                                       {% if settings.get('enabled_lang_de', 'on') == 'on' %}checked{% endif %}>
+                                <label class="form-check-label" for="enabled_lang_de">
+                                    🇩🇪 <strong>Deutsch</strong> (German)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Tab -->
+                    <div class="tab-pane fade" id="template" role="tabpanel">
+                        <div class="info-box">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Choose Template</strong><br>
+                            Select which CSS template/theme to use for your blog appearance.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="template_css" class="form-label">CSS Template</label>
+                            <select class="form-control" id="template_css" name="template_css">
+                                <option value="default.css" {% if settings.get('template_css', 'default.css') == 'default.css' %}selected{% endif %}>Default</option>
+                                <option value="light.css" {% if settings.get('template_css', 'default.css') == 'light.css' %}selected{% endif %}>Light</option>
+                                <option value="dark.css" {% if settings.get('template_css', 'default.css') == 'dark.css' %}selected{% endif %}>Dark</option>
+                                <option value="vibrant.css" {% if settings.get('template_css', 'default.css') == 'vibrant.css' %}selected{% endif %}>Vibrant (Green & Pink)</option>
+                            </select>
+                            <small class="form-text text-muted">This setting controls the overall look and feel of your blog</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Submit Buttons -->
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</form>
+{% endblock %}

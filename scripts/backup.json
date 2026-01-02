@@ -1,0 +1,273 @@
+{
+  "metadata": {
+    "export_date": "2026-01-02T13:48:38.400389",
+    "database": "../blog.db",
+    "tables_count": 3
+  },
+  "tables": {
+    "authors": {
+      "columns": [
+        "id",
+        "name",
+        "email",
+        "password",
+        "is_admin",
+        "bio_en",
+        "bio_fr",
+        "bio_de",
+        "twitter",
+        "linkedin",
+        "github",
+        "website",
+        "created_at",
+        "profile_image"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "name": "Blog Admin",
+          "email": "admin@example.com",
+          "password": "scrypt:32768:8:1$YsSaoNETUYLkCWUO$e8c9904ad5c8118e7c28a663c10c3ca8ad9ad89813c05d1a63bd8977d9b0a71710b2f9c28340a852a39c65a573fe2603f69f0d33179ca93ebfab2fefc797945d",
+          "is_admin": 1,
+          "bio_en": "Passionate about technology, travel, and sharing knowledge. Full-stack developer and tech enthusiast.",
+          "bio_fr": "Passionné par la technologie, les voyages et le partage des connaissances. Développeur full-stack et passionné de technologie.",
+          "bio_de": "Leidenschaftlich für Technologie, Reisen und Wissensaustausch. Full-Stack-Entwickler und Technik-Enthusiast.",
+          "twitter": "https://twitter.com",
+          "linkedin": "https://linkedin.com",
+          "github": "https://github.com",
+          "website": "https://example.com",
+          "created_at": "2026-01-01 21:13:35",
+          "profile_image": null
+        },
+        {
+          "id": 2,
+          "name": "Julien Mousqueton",
+          "email": "julien@mousqueton.io",
+          "password": "scrypt:32768:8:1$uKRk1TIon8F57JzL$499bb1b65f76a864b61afbfbad2549fc029349f7a800400e003617525443ddabd8c6ac6a949c55963c236d078f321388567cef521854b9e9726785f9edec650f",
+          "is_admin": 1,
+          "bio_en": "Julien Mousqueton is the Field CISO for EMEA at Cohesity, where he helps organizations strengthen their cyber resilience strategies. He is the creator and maintainer of Ransomware.live, a widely recognized resource for tracking ransomware threats and trends. Julien also serves as a Reserve Officer with OFAC, the French Cybercrime Unit within the National Police, contributing his expertise to national cybersecurity efforts.",
+          "bio_fr": "Julien Mousqueton est Field CISO pour la région EMEA chez Cohesity, où il accompagne les organisations dans le renforcement de leur stratégie de cyber-résilience. Il est créateur et mainteneur de Ransomware.live, une ressource reconnue pour le suivi des menaces et tendances liées aux ransomwares. Julien est également officier de réserve auprès de l’OFAC, l’unité de lutte contre la cybercriminalité de la Police Nationale française, apportant son expertise au service de la cybersécurité nationale.",
+          "bio_de": "",
+          "twitter": "https://twitter.com/JMousqueton",
+          "linkedin": "https://linkedin.com/in/julienmousqueton",
+          "github": "https://github.com/JMousqueton",
+          "website": "https://www.ransomware.live",
+          "created_at": "2026-01-01 21:35:59",
+          "profile_image": "author_2.jpg"
+        }
+      ]
+    },
+    "posts": {
+      "columns": [
+        "id",
+        "title",
+        "slug",
+        "content",
+        "language",
+        "status",
+        "publish_date",
+        "created_at",
+        "updated_at",
+        "author",
+        "excerpt",
+        "featured_image"
+      ],
+      "rows": [
+        {
+          "id": 7,
+          "title": "Title",
+          "slug": "title",
+          "content": "Content in markdown \r\n\r\nCould be anything \r\n\r\neven an array \r\n\r\n| Column 1 | Column 2 | Column 3 |\r\n| -------- | -------- | -------- |\r\n| Text     | Text     | Text     |\r\n\r\n",
+          "language": "en",
+          "status": "published",
+          "publish_date": "2026-01-02T13:04",
+          "created_at": "2026-01-02T13:05:36.800390",
+          "updated_at": "2026-01-02T13:05:36.800398",
+          "author": "Julien Mousqueton",
+          "excerpt": "Summary for the title ",
+          "featured_image": "post_1767355536.747568_ChatGPT_Image_Dec_24_2025_06_07_58_PM.png"
+        },
+        {
+          "id": 8,
+          "title": "Titre",
+          "slug": "titre",
+          "content": "C'est un exemple de ce que l'on peut faire en markdown \r\n\r\nCa **fonctionne** plutot bien \r\n\r\nPErso j'aime bien ",
+          "language": "fr",
+          "status": "published",
+          "publish_date": "2026-01-02T13:07",
+          "created_at": "2026-01-02T13:07:59.605543",
+          "updated_at": "2026-01-02T13:07:59.605553",
+          "author": "Julien Mousqueton",
+          "excerpt": "r\"ésumé mais le compteur ne fonctionne pas ",
+          "featured_image": "post_1767355679.551368_1767200072851.jpeg"
+        }
+      ]
+    },
+    "settings": {
+      "columns": [
+        "id",
+        "key",
+        "value",
+        "updated_at"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "key": "blog_title",
+          "value": "The Resilience Ledger",
+          "updated_at": "2026-01-02T12:39:07.064954"
+        },
+        {
+          "id": 2,
+          "key": "blog_description",
+          "value": "",
+          "updated_at": "2026-01-02T12:04:22.334195"
+        },
+        {
+          "id": 3,
+          "key": "blog_url",
+          "value": "https://www.julienmousqueton.fr",
+          "updated_at": "2026-01-02T12:39:07.077948"
+        },
+        {
+          "id": 4,
+          "key": "admin_email",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.079882"
+        },
+        {
+          "id": 5,
+          "key": "contact_email",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.080749"
+        },
+        {
+          "id": 6,
+          "key": "social_twitter",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.082166"
+        },
+        {
+          "id": 7,
+          "key": "social_linkedin",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.083025"
+        },
+        {
+          "id": 8,
+          "key": "social_github",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.084366"
+        },
+        {
+          "id": 9,
+          "key": "social_facebook",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.085511"
+        },
+        {
+          "id": 10,
+          "key": "analytics_code",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.086315"
+        },
+        {
+          "id": 11,
+          "key": "items_per_page",
+          "value": "10",
+          "updated_at": "2026-01-02T12:39:07.087204"
+        },
+        {
+          "id": 12,
+          "key": "enable_comments",
+          "value": "off",
+          "updated_at": "2026-01-02T12:39:07.090325"
+        },
+        {
+          "id": 14,
+          "key": "blog_subtitle_en",
+          "value": "Lessons learned from the field on cyber Resilience",
+          "updated_at": "2026-01-02T12:39:07.069273"
+        },
+        {
+          "id": 15,
+          "key": "blog_subtitle_fr",
+          "value": "Regards de terrain sur la cyber-résilience",
+          "updated_at": "2026-01-02T12:39:07.070454"
+        },
+        {
+          "id": 16,
+          "key": "blog_subtitle_de",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.071965"
+        },
+        {
+          "id": 28,
+          "key": "enabled_lang_en",
+          "value": "on",
+          "updated_at": "2026-01-02T12:39:07.091149"
+        },
+        {
+          "id": 29,
+          "key": "enabled_lang_fr",
+          "value": "on",
+          "updated_at": "2026-01-02T12:39:07.091895"
+        },
+        {
+          "id": 30,
+          "key": "enabled_lang_de",
+          "value": "off",
+          "updated_at": "2026-01-02T12:39:07.092635"
+        },
+        {
+          "id": 68,
+          "key": "blog_title_en",
+          "value": "The Resilience Ledger",
+          "updated_at": "2026-01-02T12:39:07.067228"
+        },
+        {
+          "id": 69,
+          "key": "blog_title_fr",
+          "value": "Entre la brêche et la reprise",
+          "updated_at": "2026-01-02T12:39:07.067946"
+        },
+        {
+          "id": 70,
+          "key": "blog_title_de",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.068560"
+        },
+        {
+          "id": 117,
+          "key": "blog_description_en",
+          "value": "Field insights on cyber resilience, incidents, ransomware and recovery. Practical lessons for CISOs and leaders, beyond prevention and buzzwords",
+          "updated_at": "2026-01-02T12:39:07.073102"
+        },
+        {
+          "id": 118,
+          "key": "blog_description_fr",
+          "value": "Retours du terrain sur la cyber-résilience, les incidents, le ransomware et la reprise. Enseignements concrets pour RSSI et dirigeants, au-delà des discours",
+          "updated_at": "2026-01-02T12:39:07.074333"
+        },
+        {
+          "id": 119,
+          "key": "blog_description_de",
+          "value": "",
+          "updated_at": "2026-01-02T12:39:07.075357"
+        },
+        {
+          "id": 152,
+          "key": "template_css",
+          "value": "default.css",
+          "updated_at": "2026-01-02T12:39:07.089336"
+        },
+        {
+          "id": 229,
+          "key": "favicon",
+          "value": "favicon.ico",
+          "updated_at": "2026-01-02T12:39:08.416315"
+        }
+      ]
+    }
+  }
+}

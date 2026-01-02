@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}{{ blog_title or 'My Blog' }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold">{{ blog_title or t.index.welcome }}</h1>
+            {% if blog_subtitle %}
+            <p class="lead text-muted">{{ blog_subtitle }}</p>
+            {% elif meta_description %}
+            <p class="lead text-muted">{{ meta_description }}</p>
+            {% endif %}
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" action="/{{ lang }}" class="row g-2">
+                    <div class="col-md-10">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" 
+                                   name="q" 
+                                   class="form-control" 
+                                   placeholder="{{ t.search.placeholder }}"
+                                   value="{{ search_query or '' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            {{ t.search.button }}
+                        </button>
+                    </div>
+                </form>
+                {% if search_query %}
+                <div class="mt-2">
+                    <small class="text-muted">
+                        {{ t.search.searching_for }} "{{ search_query }}"
+                    </small>
+                    <a href="/{{ lang }}" class="btn btn-sm btn-outline-secondary ms-2">
+                        <i class="fas fa-times"></i>
+                        {{ t.search.clear }}
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Posts List -->
+        {% if posts %}
+            {% if search_query %}
+            <p class="text-muted mb-3">
+                <i class="fas fa-info-circle"></i>
+                {{ t.search.found_results.replace('{count}', posts|length|string) }}
+            </p>
+            {% endif %}
+            
+            {% for post in posts %}
+            <article class="card post-card">
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="card-title h3">
+                                <a href="/{{ lang }}/post/{{ post.slug }}" class="text-decoration-none">
+                                    {{ post.title }}
+                                </a>
+                            </h2>
+                            
+                            <div class="post-meta mb-3">
+                                <i class="far fa-calendar"></i> 
+                                {{ post.publish_date[:10] }}
+                                {% if post.author %}
+                                <span class="mx-2">|</span>
+                                <i class="far fa-user"></i> 
+                                <a href="/{{ lang }}/author/{{ post.author|replace(' ', '-') }}" class="text-decoration-none">
+                                    {{ post.author }}
+                                </a>
+                                {% endif %}
+                                <span class="mx-2">|</span>
+                                <i class="far fa-clock"></i>
+                                {{ post.reading_time }} {{ t.post.min_read }}
+                            </div>
+                            
+                            {% if post.excerpt %}
+                            <p class="card-text">{{ post.excerpt }}</p>
+                            {% else %}
+                            <p class="card-text">{{ post.content|striptags|truncate(200) }}</p>
+                            {% endif %}
+                            
+                            <a href="/{{ lang }}/post/{{ post.slug }}" class="btn btn-primary">
+                                {{ t.post.read_more }}
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        {% if post.featured_image %}
+                        <div class="col-md-4 text-md-end text-center">
+                            <div class="post-card-thumb ms-md-auto">
+                                <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" 
+                                     alt="{{ post.title }}"
+                                     loading="lazy"
+                                     class="lazy-image">
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+            
+            <!-- Pagination -->
+            {% if total_pages > 1 %}
+            <nav aria-label="Page navigation" class="mt-5">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous Page -->
+                    {% if has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="/{{ lang }}/page/{{ prev_page }}{% if search_query %}?q={{ search_query }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                            {{ t.pagination.previous }}
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            <i class="fas fa-chevron-left"></i>
+                            {{ t.pagination.previous }}
+                        </span>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Page Numbers -->
+                    {% set page_range = range(max(1, current_page - 2), min(total_pages + 1, current_page + 3)) %}
+                    {% if 1 not in page_range %}
+                    <li class="page-item">
+                        <a class="page-link" href="/{{ lang }}/page/1{% if search_query %}?q={{ search_query }}{% endif %}">1</a>
+                    </li>
+                    {% if 2 not in page_range %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+                    
+                    {% for pg in page_range %}
+                    {% if pg == current_page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ pg }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="/{{ lang }}/page/{{ pg }}{% if search_query %}?q={{ search_query }}{% endif %}">{{ pg }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if total_pages not in page_range %}
+                    {% if (total_pages - 1) not in page_range %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                    <li class="page-item">
+                        <a class="page-link" href="/{{ lang }}/page/{{ total_pages }}{% if search_query %}?q={{ search_query }}{% endif %}">{{ total_pages }}</a>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Next Page -->
+                    {% if has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="/{{ lang }}/page/{{ next_page }}{% if search_query %}?q={{ search_query }}{% endif %}">
+                            {{ t.pagination.next }}
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            {{ t.pagination.next }}
+                            <i class="fas fa-chevron-right"></i>
+                        </span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            
+            <!-- Page Info -->
+            <div class="text-center text-muted mt-3 mb-5">
+                {{ t.pagination.page_of.replace('{current}', current_page|string).replace('{total}', total_pages|string) }}
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i>
+                {% if search_query %}
+                    {{ t.search.no_results.replace('{query}', search_query) }}
+                {% else %}
+                    {{ t.index.no_posts }}
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Enhanced card hover effects */
+    .post-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        cursor: pointer;
+    }
+    
+    .post-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    }
+    
+    .post-card .card-title a {
+        transition: color 0.2s ease;
+    }
+    
+    .post-card:hover .card-title a {
+        color: var(--secondary-color);
+    }
+    
+    .post-card-thumb img {
+        width: 100%;
+        max-height: 140px;
+        object-fit: cover;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        transition: transform 0.3s ease;
+    }
+    
+    .post-card:hover .post-card-thumb img {
+        transform: scale(1.05);
+    }
+    
+    @media (min-width: 768px) {
+        .post-card-thumb {
+            max-width: 200px;
+        }
+    }
+    
+    /* Lazy loading styles */
+    .lazy-image {
+        opacity: 0;
+        transition: opacity 0.4s ease-in;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+    
+    .lazy-image.loaded {
+        opacity: 1;
+        background: none;
+        animation: none;
+    }
+    
+    @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+</style>
+{% endblock %}

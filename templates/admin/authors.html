@@ -1,0 +1,186 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'authors' %}
+
+{% block title %}Authors{% endblock %}
+
+{% block page_header %}<i class="fas fa-users"></i> Authors{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        .authors-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .action-btn {
+            margin: 0 2px;
+        }
+        
+        .author-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .author-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .author-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .author-avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .author-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 10px;
+            object-fit: cover;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .author-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .author-email {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .author-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        
+        .author-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .author-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .author-actions button,
+        .author-actions a {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <!-- Authors Grid -->
+        {% if authors %}
+        <div class="author-grid">
+            {% for author in authors %}
+            <div class="author-card">
+                {% if author.profile_image %}
+                    <img src="/static/authors/{{ author.profile_image }}" alt="{{ author.name }}" class="author-image">
+                {% else %}
+                    <div class="author-avatar">
+                        {{ author.name[0].upper() }}
+                    </div>
+                {% endif %}
+                <div class="author-name">{{ author.name }}</div>
+                <div class="author-email">{{ author.email }}</div>
+                <div class="author-meta">
+                    {% if author.is_admin %}
+                    <span><i class="fas fa-shield-alt"></i> Admin</span>
+                    {% endif %}
+                    <span><i class="fas fa-calendar"></i> {{ author.created_at[:10] }}</span>
+                </div>
+                
+                {% if author.twitter or author.linkedin or author.github or author.website %}
+                <div class="author-meta" style="border-top: 1px solid #eee; padding-top: 0.75rem; margin-bottom: 0.75rem;">
+                    {% if author.twitter %}
+                    <a href="{{ author.twitter }}" target="_blank" title="Twitter">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    {% endif %}
+                    {% if author.linkedin %}
+                    <a href="{{ author.linkedin }}" target="_blank" title="LinkedIn">
+                        <i class="fab fa-linkedin"></i>
+                    </a>
+                    {% endif %}
+                    {% if author.github %}
+                    <a href="{{ author.github }}" target="_blank" title="GitHub">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    {% endif %}
+                    {% if author.website %}
+                    <a href="{{ author.website }}" target="_blank" title="Website">
+                        <i class="fas fa-globe"></i>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="author-actions">
+                    <a href="{{ url_for('admin_edit_author', author_id=author.id) }}" class="btn btn-sm btn-outline-primary action-btn">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger action-btn" 
+                            onclick="deleteAuthor({{ author.id }}, '{{ author.name }}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="authors-card text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No authors found</p>
+            <a href="{{ url_for('admin_new_author') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Your First Author
+            </a>
+        </div>
+        {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        function deleteAuthor(authorId, authorName) {
+            if (confirm(`Are you sure you want to delete the author "${authorName}"? This action cannot be undone.`)) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/admin/authors/delete/${authorId}`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+{% endblock %}

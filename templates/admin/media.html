@@ -1,0 +1,199 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'media' %}
+
+{% block title %}Media{% endblock %}
+
+{% block page_header %}<i class="fas fa-image"></i> Media{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        .upload-area {
+            background: white;
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 2rem;
+        }
+        
+        .upload-area:hover {
+            border-color: #0056b3;
+            background: rgba(0, 123, 255, 0.05);
+        }
+        
+        .upload-area.drag-over {
+            border-color: #0056b3;
+            background: rgba(0, 123, 255, 0.1);
+        }
+        
+        .media-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .media-item {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .media-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .media-item-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        
+        .media-item-info {
+            padding: 1rem;
+        }
+        
+        .media-item-filename {
+            font-size: 0.85rem;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 0.5rem;
+        }
+        
+        .media-item-size {
+            font-size: 0.75rem;
+            color: #999;
+            margin-bottom: 1rem;
+        }
+        
+        .media-item-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .media-item-actions button {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #999;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <!-- Upload Area -->
+        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="upload-area" id="dropZone">
+                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                <h4>Drop images here to upload</h4>
+                <p class="text-muted">or click to select files</p>
+                <p class="small text-muted">Supported formats: JPG, PNG, GIF, WebP (Max 1200px width)</p>
+                <input type="file" 
+                       id="mediaInput" 
+                       name="media_file" 
+                       accept="image/*" 
+                       style="display: none;"
+                       required>
+            </div>
+        </form>
+        
+        <!-- Media Gallery -->
+        {% if media_files %}
+        <div class="media-gallery">
+            {% for media in media_files %}
+            <div class="media-item">
+                <img src="{{ media.url }}" alt="{{ media.filename }}" class="media-item-image">
+                <div class="media-item-info">
+                    <div class="media-item-filename" title="{{ media.filename }}">{{ media.filename }}</div>
+                    <div class="media-item-size">{{ media.size }} KB</div>
+                    <div class="media-item-actions">
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-primary" 
+                                onclick="copyToClipboard('{{ media.url }}')">
+                            <i class="fas fa-copy"></i> Copy URL
+                        </button>
+                        <form method="POST" action="{{ url_for('admin_delete_media', filename=media.filename) }}" style="flex: 1;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100" onclick="return confirm('Delete this image?')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-image"></i>
+            <h4>No images yet</h4>
+            <p>Start uploading images to build your media library</p>
+        </div>
+        {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        // Drag and drop functionality
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('mediaInput');
+        const uploadForm = document.getElementById('uploadForm');
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                uploadForm.submit();
+            }
+        });
+        
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadForm.submit();
+            }
+        });
+        
+        // Copy URL to clipboard
+        function copyToClipboard(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('URL copied to clipboard!');
+            }).catch(() => {
+                alert('Failed to copy URL');
+            });
+        }
+    </script>
+{% endblock %}

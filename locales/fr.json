@@ -1,0 +1,49 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "rss": "RSS"
+  },
+  "language_modal": {
+    "title": "Choisissez votre langue"
+  },
+  "post": {
+    "min_read": "min de lecture",
+    "read_more": "Lire la suite",
+    "back_to_home": "Retour à l'accueil",
+    "was_helpful": "Cet article vous a-t-il été utile ?",
+    "already_voted": "Vous avez déjà voté sur cet article",
+    "about_author": "À propos de l'auteur",
+    "view_all_posts": "Voir tous les articles de cet auteur",
+    "author_fallback_bio": "Écrivain passionné et créateur de contenu."
+  },
+  "author": {
+    "posts_by": "Articles de",
+    "no_posts": "Aucun article disponible pour le moment de cet auteur.",
+    "bio": "Biographie"
+  },
+  "search": {
+    "placeholder": "Rechercher des articles...",
+    "button": "Rechercher",
+    "searching_for": "Recherche de :",
+    "clear": "Effacer",
+    "found_results": "{count} résultat(s) trouvé(s)",
+    "no_results": "Aucun article trouvé pour « {query} ». Essayez un autre terme de recherche."
+  },
+  "index": {
+    "welcome": "Bienvenue sur mon blog",
+    "no_posts": "Aucun article disponible pour le moment. Revenez bientôt !"
+  },
+  "pagination": {
+    "previous": "Précédent",
+    "next": "Suivant",
+    "page_of": "Page {current} sur {total}"
+  },
+  "footer": {
+    "all_rights_reserved": "Tous droits réservés.",
+    "subscribe_rss": "S'abonner via RSS"
+  },
+  "locations": {
+    "home": "Accueil",
+    "homepage": "Page d'accueil"
+  }
+}

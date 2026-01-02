@@ -1,0 +1,173 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'dashboard' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_header %}<i class="fas fa-th-large"></i> Dashboard{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card .icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card.primary .icon {
+            background: rgba(0, 123, 255, 0.1);
+            color: #007bff;
+        }
+        
+        .stat-card.success .icon {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+        
+        .stat-card.warning .icon {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+        
+        .stat-card.info .icon {
+            background: rgba(23, 162, 184, 0.1);
+            color: #17a2b8;
+        }
+        
+        .stat-card h3 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        
+        .stat-card p {
+            color: #6c757d;
+            margin: 0;
+        }
+        
+        .recent-posts {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .post-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .post-item:last-child {
+            border-bottom: none;
+        }
+        
+        .badge-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card primary">
+                    <div class="icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3>{{ total_posts }}</h3>
+                    <p>Total Posts</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card success">
+                    <div class="icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>{{ published_posts }}</h3>
+                    <p>Published</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card warning">
+                    <div class="icon">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <h3>{{ draft_posts }}</h3>
+                    <p>Drafts</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card info">
+                    <div class="icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>{{ scheduled_posts }}</h3>
+                    <p>Scheduled</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Posts -->
+        <div class="recent-posts">
+            <h4 class="mb-3"><i class="fas fa-history"></i> Recent Posts</h4>
+            {% if recent_posts %}
+                {% for post in recent_posts %}
+                <div class="post-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ post.title }}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-user"></i> {{ post.author }} |
+                                <i class="fas fa-globe"></i> {{ post.language.upper() }} |
+                                <i class="far fa-clock"></i> {{ post.reading_time }} min read |
+                                <i class="far fa-calendar"></i> {{ post.created_at[:10] }}
+                            </small>
+                        </div>
+                        <div>
+                            {% if post.status == 'published' %}
+                            <span class="badge bg-success badge-status">Published</span>
+                            {% elif post.status == 'draft' %}
+                            <span class="badge bg-warning badge-status">Draft</span>
+                            {% else %}
+                            <span class="badge bg-info badge-status">Scheduled</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted text-center py-4">No posts yet</p>
+            {% endif %}
+        </div>
+{% endblock %}

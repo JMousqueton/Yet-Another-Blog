@@ -1,0 +1,323 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'new_post' %}
+
+{% block title %}New Post{% endblock %}
+
+{% block page_header %}<i class="fas fa-plus-circle"></i> New Post{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        .form-card {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .required:after {
+            content: " *";
+            color: red;
+        }
+        
+        textarea.form-control {
+            min-height: 150px;
+        }
+        
+        #content {
+            min-height: 400px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .slug-generator {
+            font-size: 0.875rem;
+            color: #6c757d;
+            cursor: pointer;
+        }
+        
+        .slug-generator:hover {
+            color: var(--primary-color);
+        }
+        
+        .char-count {
+            font-size: 0.875rem;
+            color: #6c757d;
+            float: right;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <!-- Post Form -->
+        <div class="form-card">
+            <form method="POST" action="{{ url_for('admin_new_post') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="row">
+                    <div class="col-md-8">
+                        <!-- Title -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label required">Title</label>
+                            <input type="text" 
+                                   class="form-control form-control-lg" 
+                                   id="title" 
+                                   name="title" 
+                                   placeholder="Enter post title"
+                                   value="{{ form_data.title or '' }}"
+                                   required>
+                        </div>
+                        
+                        <!-- Slug -->
+                        <div class="mb-3">
+                            <label for="slug" class="form-label required">
+                                Slug 
+                                <small class="slug-generator" onclick="generateSlug()">
+                                    <i class="fas fa-magic"></i> Generate from title
+                                </small>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="slug" 
+                                   name="slug" 
+                                   placeholder="post-slug"
+                                   value="{{ form_data.slug or '' }}"
+                                   pattern="[a-z0-9\-]*"
+                                   title="Only lowercase letters, numbers, and hyphens"
+                                   required>
+                            <small class="form-text text-muted">URL-friendly version (lowercase, hyphens only)</small>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="mb-3">
+                            <label for="content" class="form-label required">
+                                Content (Markdown)
+                                <span class="char-count" id="contentCount">0 characters</span>
+                            </label>
+                            <textarea class="form-control" 
+                                      id="content" 
+                                      name="content" 
+                                      placeholder="## Your Heading&#10;&#10;Your content here with **bold** and *italic* text...&#10;&#10;- List item 1&#10;- List item 2">{{ form_data.content or '' }}</textarea>
+                            <small class="form-text text-muted">Use Markdown syntax for formatting</small>
+                        </div>
+                        
+                        <!-- Excerpt -->
+                        <div class="mb-3">
+                            <label for="excerpt" class="form-label">
+                                Excerpt
+                                <span class="char-count" id="excerptCount">0 characters</span>
+                            </label>
+                            <textarea class="form-control" 
+                                      id="excerpt" 
+                                      name="excerpt" 
+                                      placeholder="Brief summary of the post (optional)">{{ form_data.excerpt or '' }}</textarea>
+                            <small class="form-text text-muted">If empty, will be auto-generated from content</small>
+                        </div>
+                        
+                        <!-- Featured Image -->
+                        <div class="mb-3">
+                            <label for="featured_image" class="form-label">
+                                <i class="fas fa-image"></i> Featured Image
+                            </label>
+                            <input type="file" 
+                                   class="form-control" 
+                                   id="featured_image" 
+                                   name="featured_image" 
+                                   accept="image/*">
+                            <small class="form-text text-muted">Upload a featured image for this post (optional)</small>
+                            <div id="imagePreview" class="mt-2" style="display: none;">
+                                <img id="previewImg" src="" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <!-- Language -->
+                        <div class="mb-3">
+                            <label for="language" class="form-label required">Language</label>
+                            <select class="form-select" id="language" name="language" required>
+                                {% for lang_code, lang_info in languages.items() %}
+                                <option value="{{ lang_code }}" {% if form_data.language == lang_code or (not form_data.language and lang_code == 'en') %}selected{% endif %}>
+                                    {{ lang_info.flag }} {{ lang_info.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Status -->
+                        <div class="mb-3">
+                            <label for="status" class="form-label required">Status</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="draft" {% if form_data.status == 'draft' or not form_data.status %}selected{% endif %}>Draft</option>
+                                <option value="published" {% if form_data.status == 'published' %}selected{% endif %}>Published</option>
+                                <option value="scheduled" {% if form_data.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Publish Date -->
+                        <div class="mb-3">
+                            <label for="publish_date" class="form-label required">Publish Date & Time</label>
+                            <input type="datetime-local" 
+                                   class="form-control" 
+                                   id="publish_date" 
+                                   name="publish_date" 
+                                   value="{{ form_data.publish_date or '' }}"
+                                   required>
+                            <small class="form-text text-muted">
+                                <a href="#" onclick="setNow(); return false;">Set to now</a>
+                            </small>
+                        </div>
+                        
+                        <!-- Author -->
+                        <div class="mb-3">
+                            <label for="author" class="form-label required">Author</label>
+                            <select class="form-control" 
+                                    id="author" 
+                                    name="author"
+                                    required>
+                                {% for author in authors %}
+                                    <option value="{{ author }}" 
+                                            {% if author == current_user %}selected{% endif %}>
+                                        {{ author }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> Create Post
+                            </button>
+                            <a href="{{ url_for('admin_posts') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        // Generate slug from title
+        function generateSlug() {
+            const title = document.getElementById('title').value;
+            const slug = title.toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .trim();
+            document.getElementById('slug').value = slug;
+        }
+        
+        // Set publish date to now
+        function setNow() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const datetime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            document.getElementById('publish_date').value = datetime;
+        }
+        
+        // Character counters
+        function updateCharCount(elementId, counterId) {
+            const element = document.getElementById(elementId);
+            const counter = document.getElementById(counterId);
+            if (element && counter) {
+                counter.textContent = element.value.length + ' characters';
+            }
+        }
+        
+        // Update character counts on input
+        document.getElementById('content').addEventListener('input', function() {
+            updateCharCount('content', 'contentCount');
+        });
+        
+        document.getElementById('excerpt').addEventListener('input', function() {
+            updateCharCount('excerptCount', 'excerptCount');
+        });
+        
+        // Initialize character counts
+        updateCharCount('content', 'contentCount');
+        updateCharCount('excerpt', 'excerptCount');
+        
+        // Set default publish date to now on page load if empty
+        window.addEventListener('DOMContentLoaded', function() {
+            const publishDate = document.getElementById('publish_date');
+            if (!publishDate.value) {
+                setNow();
+            }
+        });
+    </script>
+    
+    <!-- EasyMDE Markdown Editor -->
+    <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+    <script>
+        // Initialize EasyMDE markdown editor
+        const easyMDE = new EasyMDE({
+            element: document.getElementById('content'),
+            spellChecker: false,
+            autosave: {
+                enabled: false,
+            },
+            placeholder: 'Write your post content in Markdown...',
+            toolbar: [
+                'bold', 'italic', 'heading', '|',
+                'quote', 'unordered-list', 'ordered-list', '|',
+                'link', 'image', 'table', '|',
+                'preview', 'side-by-side', 'fullscreen', '|',
+                'guide'
+            ],
+            renderingConfig: {
+                codeSyntaxHighlighting: true,
+            },
+            previewRender: function(plainText) {
+                return this.parent.markdown(plainText);
+            },
+        });
+        
+        // Update character count when editor changes
+        easyMDE.codemirror.on('change', function() {
+            const content = easyMDE.value();
+            document.getElementById('contentCount').textContent = content.length + ' characters';
+        });
+        
+        // Initialize count
+        document.getElementById('contentCount').textContent = easyMDE.value().length + ' characters';
+        
+        // Form submission validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            if (!easyMDE.value().trim()) {
+                e.preventDefault();
+                alert('Please write some content for the post');
+                return false;
+            }
+        });
+        
+        // Image preview
+        document.getElementById('featured_image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('imagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                document.getElementById('imagePreview').style.display = 'none';
+            }
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}{{ author.name }} - My Blog{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Author Header -->
+        <div class="card mb-5 card-secondary">
+            <div class="row align-items-center">
+                <div class="col-md-3 text-center mb-3 mb-md-0">
+                    <div class="author-avatar-large">
+                        {% if author.profile_image %}
+                        <img src="/static/authors/{{ author.profile_image }}"
+                             alt="{{ author.name }}"
+                             class="img-fluid rounded-circle"
+                             loading="lazy">
+                        {% else %}
+                        {{ author.name[0] }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <h1 class="fw-bold mb-3">{{ author.name }}</h1>
+                    <p class="author-bio">
+                        {% if lang == 'en' %}{{ author.bio_en }}
+                        {% elif lang == 'fr' %}{{ author.bio_fr }}
+                        {% else %}{{ author.bio_de }}
+                        {% endif %}
+                    </p>
+                    
+                    <!-- Author Social Links -->
+                    {% if author.email or author.twitter or author.linkedin or author.github or author.website %}
+                    <div style="margin-top: 1.5rem;">
+                        {% if author.website %}
+                        <a href="{{ author.website }}" target="_blank" rel="noopener noreferrer" 
+                           class="btn btn-sm btn-outline-primary me-2" title="Website">
+                            <i class="fas fa-globe"></i>
+                            {% if lang == 'en' %}Website{% elif lang == 'fr' %}Site Web{% else %}Webseite{% endif %}
+                        </a>
+                        {% endif %}
+                        
+                        {% if author.email %}
+                        <a href="mailto:{{ author.email }}" 
+                           class="btn btn-sm btn-outline-primary me-2" title="Email">
+                            <i class="fas fa-envelope"></i> Email
+                        </a>
+                        {% endif %}
+                        
+                        {% if author.twitter %}
+                        <a href="{{ author.twitter }}" target="_blank" rel="noopener noreferrer" 
+                           class="btn btn-sm btn-outline-primary me-2" title="Twitter">
+                            <i class="fab fa-x-twitter"></i> Twitter
+                        </a>
+                        {% endif %}
+                        
+                        {% if author.linkedin %}
+                        <a href="{{ author.linkedin }}" target="_blank" rel="noopener noreferrer" 
+                           class="btn btn-sm btn-outline-primary me-2" title="LinkedIn">
+                            <i class="fab fa-linkedin-in"></i> LinkedIn
+                        </a>
+                        {% endif %}
+                        
+                        {% if author.github %}
+                        <a href="{{ author.github }}" target="_blank" rel="noopener noreferrer" 
+                           class="btn btn-sm btn-outline-primary" title="GitHub">
+                            <i class="fab fa-github"></i> GitHub
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Author's Posts -->
+        <h2 class="mb-4">
+            {{ t.author.posts_by }} {{ author.name }}
+        </h2>
+        
+        {% if posts %}
+            {% for post in posts %}
+            <article class="card post-card">
+                <div class="card-body">
+                    <h3 class="card-title">
+                        <a href="/{{ lang }}/post/{{ post.slug }}" class="text-decoration-none">
+                            {{ post.title }}
+                        </a>
+                    </h3>
+                    
+                    <div class="post-meta mb-3">
+                        <i class="far fa-calendar"></i> 
+                        {{ post.publish_date[:10] }}
+                        <span class="mx-2">|</span>
+                        <i class="far fa-clock"></i>
+                        {{ post.reading_time }} {{ t.post.min_read }}
+                    </div>
+                    
+                    {% if post.excerpt %}
+                    <p class="card-text">{{ post.excerpt }}</p>
+                    {% else %}
+                    <p class="card-text">{{ post.content|striptags|truncate(200) }}</p>
+                    {% endif %}
+                    
+                    <a href="/{{ lang }}/post/{{ post.slug }}" class="btn btn-primary">
+                        {{ t.post.read_more }}
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i>
+                {{ t.author.no_posts }}
+            </div>
+        {% endif %}
+        
+        <!-- Back to Home -->
+        <hr class="my-5">
+        <div class="text-center">
+            <a href="/{{ lang }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i>
+                {{ t.post.back_to_home }}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+    <div class="col-lg-8 mx-auto">
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block meta_tags %}
+    {{ super() }}
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:title" content="{{ post.title }}">
+    <meta property="og:description" content="{{ post.excerpt or (post.content|striptags|truncate(160)) }}">
+    <meta property="og:image" content="{{ post.image_url or request.url_root + 'static/default-og-image.jpg' }}">
+    <meta property="og:locale" content="{{ lang }}_{{ lang.upper() }}">
+    <meta property="article:published_time" content="{{ post.publish_date }}">
+    {% if post.author %}
+    <meta property="article:author" content="{{ post.author }}">
+    {% endif %}
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ request.url }}">
+    <meta name="twitter:title" content="{{ post.title }}">
+    <meta name="twitter:description" content="{{ post.excerpt or (post.content|striptags|truncate(160)) }}">
+    <meta name="twitter:image" content="{{ post.image_url or request.url_root + 'static/default-og-image.jpg' }}">
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Post Header -->
+        <article>
+            <header class="mb-4">
+                <h1 class="display-4 fw-bold">{{ post.title }}</h1>
+                
+                <div class="post-meta mb-4">
+                    <i class="far fa-calendar"></i> 
+                    {{ post.publish_date[:10] }}
+                    {% if post.author %}
+                    <span class="mx-2">|</span>
+                    <i class="far fa-user"></i> 
+                    <a href="/{{ lang }}/author/{{ post.author|replace(' ', '-') }}" class="text-decoration-none">
+                        {{ post.author }}
+                    </a>
+                    {% endif %}
+                    <span class="mx-2">|</span>
+                    <i class="far fa-clock"></i>
+                    {{ post.reading_time }} {{ t.post.min_read }}
+                </div>
+            </header>
+            
+            <!-- Featured Image -->
+            {% if post.featured_image %}
+            <div class="featured-image mb-4">
+                <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" 
+                     alt="{{ post.title }}" 
+                     loading="lazy"
+                     class="lazy-image"
+                     style="width: 100%; max-height: 500px; object-fit: cover; border-radius: 12px;">
+            </div>
+            {% endif %}
+            
+            <!-- Post Content -->
+            <div class="post-content">
+                {{ post.content|markdown|safe }}
+            </div>
+            
+            <!-- Social Share -->
+            <div class="social-share" style="justify-content: center; margin: 3rem 0;">
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url_root }}{{ lang }}/post/{{ post.slug }}" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="linkedin"
+                   title="Share on LinkedIn">
+                    <i class="fab fa-linkedin-in"></i>
+                </a>
+                <a href="https://twitter.com/intent/tweet?url={{ request.url_root }}{{ lang }}/post/{{ post.slug }}&text={{ post.title }}" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="twitter"
+                   title="Share on X">
+                    <i class="fab fa-x-twitter"></i>
+                </a>
+                <a href="https://bsky.app/intent/compose?text={{ post.title }}%20{{ request.url_root }}{{ lang }}/post/{{ post.slug }}" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="bluesky"
+                   title="Share on Bluesky">
+                    <i class="fa-brands fa-bluesky"></i>
+                </a>
+            </div>
+            
+            <!-- Reactions -->
+            <div class="reactions-section">
+                <p style="margin-bottom: 1rem; font-weight: 600;">
+                    {{ t.post.was_helpful }}
+                </p>
+                <div class="reactions-container">
+                    <button class="reaction-btn" data-emoji="👍" data-label="Helpful" title="Helpful">
+                        <i class="fa-solid fa-thumbs-up"></i>
+                        <span class="count"></span>
+                    </button>
+                    <button class="reaction-btn" data-emoji="👎" data-label="Not Helpful" title="Not Helpful">
+                        <i class="fa-solid fa-thumbs-down"></i>
+                        <span class="count"></span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Author Bio Section -->
+            <hr class="my-5">
+            <div class="card card-secondary">
+                <div class="row align-items-center">
+                    <div class="col-md-3 text-center mb-3 mb-md-0">
+                        <div class="author-avatar">
+                            {% if post.author %}{{ post.author[0] }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <h5 class="fw-bold mb-2">
+                            {{ t.post.about_author }}
+                        </h5>
+                        {% if post.author %}
+                        <p class="mb-3"><strong>{{ post.author }}</strong></p>
+                        <p class="author-byline">
+                            {% if author %}
+                                {% if lang == 'en' %}{{ author.bio_en or t.post.author_fallback_bio }}
+                                {% elif lang == 'fr' %}{{ author.bio_fr or t.post.author_fallback_bio }}
+                                {% else %}{{ author.bio_de or t.post.author_fallback_bio }}
+                                {% endif %}
+                            {% else %}
+                                {{ t.post.author_fallback_bio }}
+                            {% endif %}
+                            <a href="/{{ lang }}/author/{{ post.author|replace(' ', '-') }}" class="text-decoration-none">
+                                {{ t.post.view_all_posts }}
+                            </a>.
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Back to Home -->
+            <hr class="my-5">
+            <div class="text-center">
+                <a href="/{{ lang }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ t.post.back_to_home }}
+                </a>
+            </div>
+        </article>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .post-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+    }
+    
+    .post-content h2 {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    
+    .post-content h3 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .post-content p {
+        margin-bottom: 1.5rem;
+    }
+    
+    .post-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 2rem 0;
+    }
+    
+    .post-content blockquote {
+        border-left: 4px solid var(--secondary-color);
+        padding-left: 1.5rem;
+        margin: 2rem 0;
+        font-style: italic;
+        color: #6c757d;
+    }
+    
+    .post-content code {
+        background-color: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .post-content pre {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-x: auto;
+    }
+    
+    .post-content ul, .post-content ol {
+        margin-bottom: 1.5rem;
+    }
+    
+    .post-content li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .reaction-btn {
+        background: var(--bg-color);
+        border: 2px solid var(--border-color);
+        border-radius: 50px;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        font-size: 1.25rem;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        position: relative;
+    }
+    
+    .reaction-btn i {
+        display: block;
+    }
+    
+    .reaction-btn:hover {
+        border-color: var(--primary-color);
+        background-color: rgba(0, 123, 255, 0.05);
+        transform: scale(1.05);
+    }
+    
+    .reaction-btn.active {
+        border-color: var(--primary-color);
+        background-color: rgba(0, 123, 255, 0.15);
+        font-weight: 600;
+    }
+    
+    .reaction-btn .count {
+        font-size: 0.7rem;
+        font-weight: 700;
+        min-width: 1.2rem;
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        width: 1.5rem;
+        height: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .reaction-btn .count:empty {
+        display: none;
+    }
+    
+    /* Lazy loading styles */
+    .lazy-image {
+        opacity: 0;
+        transition: opacity 0.4s ease-in;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+    
+    .lazy-image.loaded {
+        opacity: 1;
+        background: none;
+        animation: none;
+    }
+    
+    @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const postSlug = '{{ post.slug }}';
+    const reactionKey = `reactions_${postSlug}`;
+    const voteKey = `voted_${postSlug}`;
+    const reactionButtons = document.querySelectorAll('.reaction-btn');
+    
+    // Load reactions from localStorage
+    function loadReactions() {
+        const reactions = JSON.parse(localStorage.getItem(reactionKey)) || {};
+        reactionButtons.forEach(btn => {
+            const emoji = btn.dataset.emoji;
+            const count = reactions[emoji] || 0;
+            const countSpan = btn.querySelector('.count');
+            countSpan.textContent = count > 0 ? count : '';
+            if (count > 0) {
+                btn.classList.add('active');
+            }
+        });
+    }
+    
+    // Save reactions to localStorage
+    function saveReactions() {
+        const reactions = {};
+        reactionButtons.forEach(btn => {
+            const count = parseInt(btn.querySelector('.count').textContent) || 0;
+            if (count > 0) {
+                reactions[btn.dataset.emoji] = count;
+            }
+        });
+        localStorage.setItem(reactionKey, JSON.stringify(reactions));
+    }
+    
+    // Check if user has already voted
+    function hasVoted() {
+        return localStorage.getItem(voteKey) === 'true';
+    }
+    
+    // Mark user as voted
+    function markAsVoted() {
+        localStorage.setItem(voteKey, 'true');
+    }
+    
+    // Disable all buttons
+    function disableButtons() {
+        reactionButtons.forEach(btn => {
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+        });
+    }
+    
+    // Handle reaction button clicks
+    reactionButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Check if user already voted
+            if (hasVoted()) {
+                alert('{{ t.post.already_voted }}');
+                return;
+            }
+            
+            const countSpan = this.querySelector('.count');
+            let count = parseInt(countSpan.textContent) || 0;
+            count++;
+            countSpan.textContent = count;
+            this.classList.add('active');
+            
+            // Add a little animation
+            this.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 200);
+            
+            saveReactions();
+            markAsVoted();
+            disableButtons();
+        });
+    });
+    
+    // Initial load and check voting status
+    loadReactions();
+    if (hasVoted()) {
+        disableButtons();
+    }
+});
+</script>
+{% endblock %}
