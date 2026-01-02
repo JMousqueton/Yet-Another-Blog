@@ -1245,12 +1245,48 @@ def admin_new_post():
         
         # Check if slug already exists for this language
         existing = db.execute('''
-            SELECT id FROM posts WHERE slug = ? AND language = ?
+            SELECT * FROM posts WHERE slug = ? AND language = ?
         ''', (slug, language)).fetchone()
         
         if existing:
-            # Post already exists - redirect to edit page instead
-            return redirect(url_for('admin_edit_post', post_id=existing['id']))
+            # If the post already exists (e.g., a draft), update it with new data instead of creating a duplicate
+            try:
+                featured_image = existing['featured_image']
+                if 'featured_image' in request.files:
+                    file = request.files['featured_image']
+                    if file and file.filename:
+                        filename = secure_filename(f"post_{datetime.now().timestamp()}_{file.filename}")
+                        filepath = os.path.join('static', 'uploads', filename)
+                        os.makedirs(os.path.join('static', 'uploads'), exist_ok=True)
+                        try:
+                            img = Image.open(file.stream)
+                            if img.mode != 'RGB':
+                                img = img.convert('RGB')
+                            max_width = 1200
+                            if img.width > max_width:
+                                ratio = max_width / img.width
+                                new_height = int(img.height * ratio)
+                                img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+                            img.save(filepath, 'JPEG', quality=85, optimize=True)
+                            featured_image = filename
+                        except Exception as e:
+                            flash(f'Error processing image: {str(e)}', 'warning')
+                featured = 1 if request.form.get('featured') else 0
+                db.execute('''
+                    UPDATE posts SET 
+                        title = ?, slug = ?, content = ?, excerpt = ?, language = ?, status = ?, publish_date = ?, author = ?, featured_image = ?, featured = ?, updated_at = ?
+                    WHERE id = ?
+                ''', (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured, datetime.now().isoformat(), existing['id']))
+                db.commit()
+                flash(f'Post "{title}" updated successfully!', 'success')
+                return redirect(url_for('admin_edit_post', post_id=existing['id']))
+            except Exception as e:
+                flash(f'Error updating post: {str(e)}', 'error')
+                return render_template('admin/new_post.html', 
+                                     languages=LANGUAGES,
+                                     authors=authors_list,
+                                     current_user=session.get('user_name'),
+                                     form_data=request.form)
         
         # Insert post
         try:
