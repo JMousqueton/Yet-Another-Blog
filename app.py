@@ -979,11 +979,12 @@ def sitemap():
         ORDER BY updated_at DESC
     ''', (now,)).fetchall()
     
-    # Build sitemap XML
+    # Build sitemap XML using only enabled languages
     sitemap_urls = []
+    enabled_languages = get_enabled_languages().keys()
     
-    # Add home pages for each language
-    for lang in LANGUAGES:
+    # Add home pages for each enabled language
+    for lang in enabled_languages:
         sitemap_urls.append({
             'url': f'https://{request.host}/{lang}',
             'updated': datetime.now().isoformat(),
@@ -991,14 +992,16 @@ def sitemap():
             'priority': '1.0'
         })
     
-    # Add post URLs
+    # Add post URLs only for enabled languages
     for post in posts:
-        sitemap_urls.append({
-            'url': f'https://{request.host}/{dict(post)["language"]}/post/{dict(post)["slug"]}',
-            'updated': dict(post)['updated_at'],
-            'changefreq': 'monthly',
-            'priority': '0.9'
-        })
+        post_lang = dict(post)['language']
+        if post_lang in enabled_languages:
+            sitemap_urls.append({
+                'url': f'https://{request.host}/{post_lang}/post/{dict(post)["slug"]}',
+                'updated': dict(post)['updated_at'],
+                'changefreq': 'monthly',
+                'priority': '0.9'
+            })
     
     # Generate XML
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
