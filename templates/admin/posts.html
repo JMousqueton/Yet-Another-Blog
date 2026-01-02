@@ -115,7 +115,12 @@
                         {% for post in posts %}
                         <tr>
                             <td>
-                                <strong>{{ post.title }}</strong>
+                                <strong>
+                                    {% if post.featured %}
+                                    <i class="fas fa-star text-warning" title="Featured Post"></i> 
+                                    {% endif %}
+                                    {{ post.title }}
+                                </strong>
                                 <br>
                                 <small class="text-muted">{{ post.slug }}</small>
                             </td>

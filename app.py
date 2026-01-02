@@ -1702,6 +1702,129 @@ def admin_settings():
     return render_template('admin/settings.html', settings=settings, languages=LANGUAGES)
 
 
+@app.route('/admin/api/export-database')
+@login_required
+@admin_required
+def api_export_database():
+    """Export database to JSON for backup."""
+    try:
+        db = get_db()
+        
+        # Get all tables
+        tables = db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+        ).fetchall()
+        
+        export_data = {
+            'export_date': datetime.now().isoformat(),
+            'tables': {}
+        }
+        
+        # Export each table
+        for table_row in tables:
+            table_name = table_row['name']
+            
+            # Get column names
+            columns_info = db.execute(f"PRAGMA table_info({table_name})").fetchall()
+            columns = [col['name'] for col in columns_info]
+            
+            # Get all rows
+            rows = db.execute(f"SELECT * FROM {table_name}").fetchall()
+            
+            # Convert to list of dictionaries
+            export_data['tables'][table_name] = {
+                'columns': columns,
+                'rows': [dict(row) for row in rows]
+            }
+        
+        # Convert to JSON
+        json_data = json.dumps(export_data, indent=2, default=str)
+        
+        # Create response with download headers
+        response = make_response(json_data)
+        response.headers['Content-Type'] = 'application/json'
+        response.headers['Content-Disposition'] = f'attachment; filename=blog_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+        
+        return response
+        
+    except Exception as e:
+        print(f"Export error: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/admin/api/import-database', methods=['POST'])
+@login_required
+@admin_required
+@csrf.exempt
+def api_import_database():
+    """Import database from JSON backup."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'No file selected'}), 400
+        
+        erase = request.form.get('erase', 'false') == 'true'
+        
+        # Read JSON data
+        try:
+            import_data = json.load(file)
+        except json.JSONDecodeError:
+            return jsonify({'success': False, 'message': 'Invalid JSON file'}), 400
+        
+        db = get_db()
+        
+        # If erase option is checked, delete all data from tables
+        if erase:
+            tables = db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            ).fetchall()
+            
+            for table_row in tables:
+                table_name = table_row['name']
+                db.execute(f"DELETE FROM {table_name}")
+        
+        # Import each table
+        imported_count = 0
+        for table_name, table_data in import_data.get('tables', {}).items():
+            rows = table_data.get('rows', [])
+            
+            for row in rows:
+                columns = list(row.keys())
+                values = list(row.values())
+                placeholders = ','.join(['?' for _ in columns])
+                
+                if erase:
+                    # Direct insert when erasing
+                    db.execute(
+                        f"INSERT INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})",
+                        values
+                    )
+                else:
+                    # Insert or replace to avoid duplicates
+                    db.execute(
+                        f"INSERT OR REPLACE INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})",
+                        values
+                    )
+                imported_count += 1
+        
+        db.commit()
+        
+        message = f'Successfully imported {imported_count} records'
+        if erase:
+            message += ' (database was erased first)'
+        
+        return jsonify({'success': True, 'message': message})
+        
+    except Exception as e:
+        print(f"Import error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/admin/statistics')
 @login_required
 def admin_statistics():
