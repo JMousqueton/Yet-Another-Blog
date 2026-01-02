@@ -122,6 +122,16 @@ def markdown_filter(text):
     
     return html
 
+# Word count filter for Jinja2 templates
+@app.template_filter('wordcount')
+def wordcount_filter(text):
+    """Count words in text."""
+    if not text:
+        return 0
+    # Remove HTML tags and count words
+    clean_text = re.sub('<[^<]+?>', '', text)
+    return len(clean_text.split())
+
 # Supported languages
 LANGUAGES = {
     'en': {'name': 'English', 'flag': '🇬🇧'},

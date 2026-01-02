@@ -27,6 +27,37 @@
     <meta name="twitter:title" content="{{ post.title }}">
     <meta name="twitter:description" content="{{ post.excerpt or (post.content|striptags|truncate(160)) }}">
     <meta name="twitter:image" content="{{ meta_image or (request.url_root + 'static/default-og-image.jpg') }}">
+    
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "{{ post.title }}",
+      "description": "{{ post.excerpt or (post.content|striptags|truncate(160)) }}",
+      "image": "{{ meta_image or (request.url_root + 'static/default-og-image.jpg') }}",
+      "datePublished": "{{ post.publish_date }}",
+      "dateModified": "{{ post.updated_at }}",
+      "url": "{{ request.url }}",
+      "wordCount": {{ post.content|wordcount }},
+      "articleBody": "{{ post.content|striptags|replace('"', '\\"') }}",
+      {% if author %}
+      "author": {
+        "@type": "Person",
+        "name": "{{ author.name }}",
+        "url": "{{ request.url_root }}{{ lang }}/author/{{ author.name|replace(' ', '-') }}"
+        {% if author.profile_image %}
+        ,"image": "{{ request.url_root }}static/authors/{{ author.profile_image }}"
+        {% endif %}
+      },
+      {% endif %}
+      "publisher": {
+        "@type": "Organization",
+        "name": "{{ blog_title or 'My Blog' }}",
+        "url": "{{ request.url_root }}"
+      }
+    }
+    </script>
 {% endblock %}
 
 {% block content %}

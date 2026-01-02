@@ -2,6 +2,31 @@
 
 {% block title %}{{ author.name }} - My Blog{% endblock %}
 
+{% block meta_tags %}
+    <!-- JSON-LD Structured Data for Person -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "{{ author.name }}",
+      {% if author.profile_image %}
+      "image": "{{ request.url_root }}static/authors/{{ author.profile_image }}",
+      {% endif %}
+      "jobTitle": "Author",
+      "url": "{{ request.url }}",
+      {% if author.bio_en or author.bio_fr or author.bio_de %}
+      "description": "{% if lang == 'en' %}{{ author.bio_en }}{% elif lang == 'fr' %}{{ author.bio_fr }}{% else %}{{ author.bio_de }}{% endif %}",
+      {% endif %}
+      "sameAs": [
+        {% if author.website %}"{{ author.website }}",{% endif %}
+        {% if author.twitter %}"https://twitter.com/{{ author.twitter }}",{% endif %}
+        {% if author.linkedin %}"{{ author.linkedin }}",{% endif %}
+        {% if author.github %}"https://github.com/{{ author.github }}"{% endif %}
+      ]
+    }
+    </script>
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-lg-8 mx-auto">

@@ -2,6 +2,25 @@
 
 {% block title %}{{ blog_title or 'My Blog' }}{% endblock %}
 
+{% block meta_tags %}
+    <!-- JSON-LD Structured Data for Website -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      "name": "{{ blog_title or 'My Blog' }}",
+      "description": "{{ meta_description }}",
+      "url": "{{ request.url_root }}{{ lang }}",
+      "inLanguage": "{{ lang }}",
+      "mainEntity": {
+        "@type": "WebSite",
+        "name": "{{ blog_title or 'My Blog' }}",
+        "url": "{{ request.url_root }}"
+      }
+    }
+    </script>
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-lg-8 mx-auto">
