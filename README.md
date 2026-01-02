@@ -262,7 +262,7 @@ See `requirements.txt` for complete list.
 
 ## 📄 License
 
-[Add your license here]
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## 🙏 Credits
 
