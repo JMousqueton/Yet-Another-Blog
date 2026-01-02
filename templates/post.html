@@ -115,7 +115,13 @@
                 <div class="row align-items-center">
                     <div class="col-md-3 text-center mb-3 mb-md-0">
                         <div class="author-avatar">
-                            {% if post.author %}{{ post.author[0] }}{% endif %}
+                            {% if author and author.profile_image %}
+                                <img src="{{ url_for('static', filename='authors/' + author.profile_image) }}" 
+                                     alt="{{ post.author }}"
+                                     style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            {% elif post.author %}
+                                {{ post.author[0] }}
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-9">
@@ -377,6 +383,45 @@ document.addEventListener('DOMContentLoaded', function() {
     if (hasVoted()) {
         disableButtons();
     }
+    
+    // Track time spent on post
+    let timeSpentInterval;
+    let timeSpentSeconds = 0;
+    
+    function startTimeTracking() {
+        timeSpentInterval = setInterval(() => {
+            timeSpentSeconds++;
+            // Send data to server every 30 seconds or on page unload
+            if (timeSpentSeconds % 30 === 0) {
+                recordTimeSpent();
+            }
+        }, 1000);
+    }
+    
+    function recordTimeSpent() {
+        const data = {
+            post_slug: '{{ post.slug }}',
+            language: '{{ lang }}',
+            time_spent: timeSpentSeconds
+        };
+        
+        navigator.sendBeacon('/admin/api/time-spent', 
+            JSON.stringify(data)
+        );
+    }
+    
+    // Start tracking when page loads
+    startTimeTracking();
+    
+    // Record time spent when page unloads
+    window.addEventListener('beforeunload', function() {
+        if (timeSpentSeconds > 0) {
+            recordTimeSpent();
+        }
+        if (timeSpentInterval) {
+            clearInterval(timeSpentInterval);
+        }
+    });
 });
 </script>
 {% endblock %}
