@@ -521,56 +521,66 @@ def send_email(to_email, subject, body):
 
 def update_scheduled_posts():
     """Update scheduled posts to published if their publish date has passed."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    
-    now = datetime.now().isoformat()
-    
-    # Fetch scheduled posts that need to be published
-    cursor.execute('''
-        SELECT p.id, p.title, p.slug, p.language, p.author, a.email, a.name as author_name
-        FROM posts p
-        LEFT JOIN authors a ON p.author = a.name
-        WHERE p.status = 'scheduled' AND p.publish_date <= ?
-    ''', (now,))
-    
-    posts_to_publish = cursor.fetchall()
-    
-    # Update posts to published
-    cursor.execute('''
-        UPDATE posts 
-        SET status = 'published', updated_at = ? 
-        WHERE status = 'scheduled' AND publish_date <= ?
-    ''', (now, now))
-    
-    updated = cursor.rowcount
-    conn.commit()
-    conn.close()
-    
-    # Send email notifications to authors
-    if updated > 0:
-        print(f"Updated {updated} scheduled post(s) to published")
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
         
-        for post in posts_to_publish:
-            if post['email']:
-                post_url = f"{request.url_root if hasattr(request, 'url_root') else 'http://localhost:5001/'}{post['language']}/post/{post['slug']}"
-                
-                subject = f"Your post '{post['title']}' has been published"
-                body = f"""
-                <html>
-                  <body>
-                    <h2>Post Published</h2>
-                    <p>Hello {post['author_name']},</p>
-                    <p>Your scheduled post <strong>{post['title']}</strong> has been automatically published.</p>
-                    <p><a href="{post_url}">View your post</a></p>
-                    <br>
-                    <p>Best regards,<br>{app.config['APP_NAME']}</p>
-                  </body>
-                </html>
-                """
-                
-                send_email(post['email'], subject, body)
+        now = datetime.now().isoformat()
+        
+        # Fetch scheduled posts that need to be published
+        cursor.execute('''
+            SELECT p.id, p.title, p.slug, p.language, p.author, a.email, a.name as author_name
+            FROM posts p
+            LEFT JOIN authors a ON p.author = a.name
+            WHERE p.status = 'scheduled' AND p.publish_date <= ?
+        ''', (now,))
+        
+        posts_to_publish = cursor.fetchall()
+        
+        # Update posts to published
+        cursor.execute('''
+            UPDATE posts 
+            SET status = 'published', updated_at = ? 
+            WHERE status = 'scheduled' AND publish_date <= ?
+        ''', (now, now))
+        
+        updated = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        # Send email notifications to authors
+        if updated > 0:
+            print(f"✅ Updated {updated} scheduled post(s) to published at {now}")
+            
+            # Get base URL from environment or use default
+            base_url = os.getenv('BASE_URL', 'http://localhost:5001')
+            
+            for post in posts_to_publish:
+                if post['email']:
+                    post_url = f"{base_url}/{post['language']}/post/{post['slug']}"
+                    
+                    subject = f"Your post '{post['title']}' has been published"
+                    body = f"""
+                    <html>
+                      <body>
+                        <h2>Post Published</h2>
+                        <p>Hello {post['author_name']},</p>
+                        <p>Your scheduled post <strong>{post['title']}</strong> has been automatically published.</p>
+                        <p><a href="{post_url}">View your post</a></p>
+                        <br>
+                        <p>Best regards,<br>{app.config['APP_NAME']}</p>
+                      </body>
+                    </html>
+                    """
+                    
+                    send_email(post['email'], subject, body)
+        else:
+            print(f"⏰ No scheduled posts to publish at {now}")
+    except Exception as e:
+        print(f"❌ Error in scheduled post publishing: {e}")
+        import traceback
+        traceback.print_exc()
 
 # Run database migrations on app startup
 try:
