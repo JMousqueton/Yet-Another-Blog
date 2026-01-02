@@ -527,22 +527,25 @@ def update_scheduled_posts():
         cursor = conn.cursor()
         
         now = datetime.now().isoformat()
+        print(f"⏰ Scheduler check at {now}")
         
         # Fetch scheduled posts that need to be published
+        # Use datetime() for proper comparison regardless of format variations
         cursor.execute('''
             SELECT p.id, p.title, p.slug, p.language, p.author, a.email, a.name as author_name
             FROM posts p
             LEFT JOIN authors a ON p.author = a.name
-            WHERE p.status = 'scheduled' AND p.publish_date <= ?
+            WHERE p.status = 'scheduled' AND datetime(p.publish_date) <= datetime(?)
         ''', (now,))
         
         posts_to_publish = cursor.fetchall()
+        print(f"📋 Found {len(posts_to_publish)} post(s) ready to publish")
         
         # Update posts to published
         cursor.execute('''
             UPDATE posts 
             SET status = 'published', updated_at = ? 
-            WHERE status = 'scheduled' AND publish_date <= ?
+            WHERE status = 'scheduled' AND datetime(publish_date) <= datetime(?)
         ''', (now, now))
         
         updated = cursor.rowcount
