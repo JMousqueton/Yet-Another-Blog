@@ -1,0 +1,31 @@
+# systemd service file for Yet Another Blog
+# Copy to: /etc/systemd/system/yet-another-blog.service
+# Adjust User, Group, WorkingDirectory, and paths as needed.
+
+[Unit]
+Description=Yet Another Blog - Multilingual Flask Blog Platform
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/yet-another-blog
+Environment="PATH=/var/www/yet-another-blog/venv/bin"
+ExecStart=/var/www/yet-another-blog/venv/bin/python /var/www/yet-another-blog/app.py
+
+# Restart on failure
+Restart=always
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=yet-another-blog
+
+[Install]
+WantedBy=multi-user.target
