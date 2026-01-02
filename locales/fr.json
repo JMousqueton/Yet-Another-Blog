@@ -45,5 +45,18 @@
   "locations": {
     "home": "Accueil",
     "homepage": "Page d'accueil"
+  },
+  "errors": {
+    "404": {
+      "title": "Page non trouvée",
+      "message": "La page que vous recherchez n'existe pas ou a été déplacée.",
+      "go_home": "Retour à l'accueil"
+    },
+    "429": {
+      "title": "Ralentissez !",
+      "message": "Vous faites trop de requêtes. Veuillez patienter un instant et réessayer.",
+      "info": "Notre limitation de débit est en place pour garantir une expérience fluide pour tous.",
+      "go_home": "Retour à l'accueil"
+    }
   }
 }

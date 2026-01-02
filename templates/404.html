@@ -1,11 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}
-{% if lang == 'en' %}Page Not Found
-{% elif lang == 'fr' %}Page non trouvée
-{% else %}Seite nicht gefunden
-{% endif %}
-{% endblock %}
+{% block title %}{{ t.errors['404'].title }}{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -13,24 +8,10 @@
         <div class="py-5">
             <i class="fas fa-exclamation-triangle error-icon"></i>
             <h1 class="display-1 fw-bold mt-4">404</h1>
-            <h2 class="mb-4">
-                {% if lang == 'en' %}Page Not Found
-                {% elif lang == 'fr' %}Page non trouvée
-                {% else %}Seite nicht gefunden
-                {% endif %}
-            </h2>
-            <p class="lead mb-4">
-                {% if lang == 'en' %}The page you're looking for doesn't exist or has been moved.
-                {% elif lang == 'fr' %}La page que vous recherchez n'existe pas ou a été déplacée.
-                {% else %}Die gesuchte Seite existiert nicht oder wurde verschoben.
-                {% endif %}
-            </p>
+            <h2 class="mb-4">{{ t.errors['404'].title }}</h2>
+            <p class="lead mb-4">{{ t.errors['404'].message }}</p>
             <a href="/{{ lang }}" class="btn btn-primary btn-lg">
-                <i class="fas fa-home"></i>
-                {% if lang == 'en' %}Go Home
-                {% elif lang == 'fr' %}Retour à l'accueil
-                {% else %}Zur Startseite
-                {% endif %}
+                <i class="fas fa-home"></i> {{ t.errors['404'].go_home }}
             </a>
         </div>
     </div>

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, make_response, redirect, url_for, g, Response, session, flash, abort
+from flask import Flask, render_template, request, make_response, redirect, url_for, g, Response, session, flash, abort, jsonify
 import sqlite3
 from datetime import datetime
 from feedgen.feed import FeedGenerator
@@ -842,6 +842,16 @@ def page_not_found(e):
     if lang not in enabled_languages:
         lang = next(iter(enabled_languages.keys()), DEFAULT_LANGUAGE)
     return render_template('404.html', lang=lang, languages=enabled_languages), 404
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    """429 Too Many Requests error handler."""
+    enabled_languages = get_enabled_languages()
+    lang = getattr(g, 'language', DEFAULT_LANGUAGE)
+    # Fall back to the first enabled language if the requested one is disabled
+    if lang not in enabled_languages:
+        lang = next(iter(enabled_languages.keys()), DEFAULT_LANGUAGE)
+    return render_template('429.html', lang=lang, languages=enabled_languages), 429
 
 @app.route('/robots.txt')
 def robots():
@@ -1717,6 +1727,90 @@ def api_post_stats(post_id):
         'total_views': views,
         'trend': trend_data
     }
+
+@app.route('/admin/api/autosave', methods=['POST'])
+@login_required
+@csrf.exempt
+def api_autosave():
+    """Auto-save post draft to prevent data loss."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'No data provided'}), 400
+            
+        post_id = data.get('post_id')
+        title = data.get('title', '').strip()
+        content = data.get('content', '').strip()
+        slug = data.get('slug', '').strip()
+        excerpt = data.get('excerpt', '').strip()
+        language = data.get('language', 'en')
+        author = data.get('author', session.get('user_name'))
+        
+        db = get_db()
+        current_author = session.get('user_name')
+        is_admin_user = bool(session.get('is_admin'))
+        
+        # Validate minimum data
+        if not title and not content:
+            return jsonify({'success': False, 'message': 'No content to save'}), 400
+        
+        # Use a default slug if empty
+        if not slug:
+            slug = 'untitled-' + datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        if post_id:
+            # Update existing post
+            existing = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
+            if not existing:
+                return jsonify({'success': False, 'message': 'Post not found'}), 404
+            
+            # Only admins or the post author can update
+            if not is_admin_user and existing['author'] != current_author:
+                return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+            
+            db.execute('''
+                UPDATE posts 
+                SET title = ?, slug = ?, content = ?, excerpt = ?, language = ?, 
+                    author = ?, updated_at = ?
+                WHERE id = ?
+            ''', (title, slug, content, excerpt, language, author, datetime.now().isoformat(), post_id))
+            db.commit()
+            
+            return jsonify({'success': True, 'message': 'Draft saved', 'post_id': post_id})
+        else:
+            # Create new draft post
+            # Check for existing draft with same slug
+            existing = db.execute('''
+                SELECT id FROM posts WHERE slug = ? AND language = ? AND status = 'draft'
+            ''', (slug, language)).fetchone()
+            
+            if existing:
+                # Update existing draft
+                db.execute('''
+                    UPDATE posts 
+                    SET title = ?, content = ?, excerpt = ?, author = ?, updated_at = ?
+                    WHERE id = ?
+                ''', (title, content, excerpt, author, datetime.now().isoformat(), existing['id']))
+                db.commit()
+                return jsonify({'success': True, 'message': 'Draft updated', 'post_id': existing['id']})
+            else:
+                # Create new draft
+                cursor = db.execute('''
+                    INSERT INTO posts (title, slug, content, excerpt, language, status, 
+                                     publish_date, author, created_at, updated_at, featured)
+                    VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, 0)
+                ''', (title, slug, content, excerpt, language, 
+                      datetime.now().isoformat(), author, 
+                      datetime.now().isoformat(), datetime.now().isoformat()))
+                db.commit()
+                
+                return jsonify({'success': True, 'message': 'Draft created', 'post_id': cursor.lastrowid})
+                
+    except Exception as e:
+        print(f"Auto-save error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/admin/about')
 @login_required

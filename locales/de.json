@@ -45,5 +45,18 @@
   "locations": {
     "home": "Startseite",
     "homepage": "Startseite"
+  },
+  "errors": {
+    "404": {
+      "title": "Seite nicht gefunden",
+      "message": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+      "go_home": "Zur Startseite"
+    },
+    "429": {
+      "title": "Langsamer!",
+      "message": "Sie stellen zu viele Anfragen. Bitte warten Sie einen Moment und versuchen Sie es erneut.",
+      "info": "Unsere Ratenbegrenzung ist vorhanden, um allen ein reibungsloses Erlebnis zu gewährleisten.",
+      "go_home": "Zur Startseite"
+    }
   }
 }

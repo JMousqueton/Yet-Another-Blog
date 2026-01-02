@@ -45,5 +45,18 @@
   "locations": {
     "home": "Home",
     "homepage": "Homepage"
+  },
+  "errors": {
+    "404": {
+      "title": "Page Not Found",
+      "message": "The page you're looking for doesn't exist or has been moved.",
+      "go_home": "Go Home"
+    },
+    "429": {
+      "title": "Slow Down!",
+      "message": "You're making too many requests. Please wait a moment and try again.",
+      "info": "Our rate limiting is in place to ensure a smooth experience for everyone.",
+      "go_home": "Go Home"
+    }
   }
 }

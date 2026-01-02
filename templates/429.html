@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t.errors['429'].title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto text-center">
+        <div class="py-5">
+            <i class="fas fa-hourglass-half error-icon" style="color: #ffc107;"></i>
+            <h1 class="display-1 fw-bold mt-4">429</h1>
+            <h2 class="mb-4">{{ t.errors['429'].title }}</h2>
+            <p class="lead mb-4">{{ t.errors['429'].message }}</p>
+            <p class="text-muted mb-4">{{ t.errors['429'].info }}</p>
+            <a href="/{{ lang }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-home"></i> {{ t.errors['429'].go_home }}
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-icon {
+        font-size: 5rem;
+        opacity: 0.8;
+        animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 0.6;
+        }
+        50% {
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}
