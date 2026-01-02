@@ -1409,6 +1409,22 @@ def admin_settings():
     
     return render_template('admin/settings.html', settings=settings, languages=LANGUAGES)
 
+
+@app.route('/admin/about')
+@login_required
+def admin_about():
+    """About page for the admin area."""
+    repo_url = "https://github.com/JMousqueton/Yet-Another-Blog"
+    highlights = [
+        {"icon": "fa-language", "title": "Multilingual", "text": "English, French, German with JSON-based i18n and fallbacks."},
+        {"icon": "fa-gauge-high", "title": "Performance", "text": "Lazy-loading images, smooth transitions, and optimized assets."},
+        {"icon": "fa-shield-alt", "title": "Security", "text": "CSRF protection, rate limiting, CSP headers, and secure auth."},
+        {"icon": "fa-database", "title": "Data Safety", "text": "Export/import scripts, scheduled publishing, and backups."},
+        {"icon": "fa-pen", "title": "Authoring", "text": "WYSIWYG editor, drafts/scheduled posts, author bios and media."},
+        {"icon": "fa-rss", "title": "Reach", "text": "Per-language RSS, SEO metadata, sitemaps, and social sharing."},
+    ]
+    return render_template('admin/about.html', repo_url=repo_url, highlights=highlights)
+
 # Initialize scheduler for auto-publishing scheduled posts
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=update_scheduled_posts, trigger="interval", minutes=SCHEDULER_INTERVAL)

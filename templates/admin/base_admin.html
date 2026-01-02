@@ -100,6 +100,7 @@
             <li><a href="{{ url_for('admin_authors') }}" {% if active_page == 'authors' %}class="active"{% endif %}><i class="fas fa-users"></i> Authors</a></li>
             <li><a href="{{ url_for('admin_media') }}" {% if active_page == 'media' %}class="active"{% endif %}><i class="fas fa-image"></i> Media</a></li>
             <li><a href="{{ url_for('admin_settings') }}" {% if active_page == 'settings' %}class="active"{% endif %}><i class="fas fa-cog"></i> Settings</a></li>
+            <li><a href="{{ url_for('admin_about') }}" {% if active_page == 'about' %}class="active"{% endif %}><i class="fas fa-info-circle"></i> About</a></li>
         </ul>
         <div style="position: absolute; bottom: 1rem; width: 100%; padding: 0 1.5rem;">
             <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-light w-100">
