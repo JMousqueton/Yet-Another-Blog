@@ -84,6 +84,10 @@ footer {
     color: #999;
 }
 
+.text-muted {
+    color: #bbb !important;
+}
+
 a {
     color: #3498db;
 }

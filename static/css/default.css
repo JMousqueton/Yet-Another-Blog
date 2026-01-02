@@ -146,6 +146,10 @@ input:checked + .slider:before {
     font-size: 0.9rem;
 }
 
+[data-theme="dark"] .text-muted {
+    color: #bbb !important;
+}
+
 .post-meta i {
     margin-right: 5px;
 }
