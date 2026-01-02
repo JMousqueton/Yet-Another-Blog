@@ -97,9 +97,12 @@
             <li><a href="{{ url_for('admin_dashboard') }}" {% if active_page == 'dashboard' %}class="active"{% endif %}><i class="fas fa-th-large"></i> Dashboard</a></li>
             <li><a href="{{ url_for('admin_posts') }}" {% if active_page == 'posts' %}class="active"{% endif %}><i class="fas fa-file-alt"></i> Posts</a></li>
             <li><a href="{{ url_for('admin_new_post') }}" {% if active_page == 'new_post' %}class="active"{% endif %}><i class="fas fa-plus-circle"></i> New Post</a></li>
+            {% if session.get('is_admin') %}
             <li><a href="{{ url_for('admin_authors') }}" {% if active_page == 'authors' %}class="active"{% endif %}><i class="fas fa-users"></i> Authors</a></li>
             <li><a href="{{ url_for('admin_media') }}" {% if active_page == 'media' %}class="active"{% endif %}><i class="fas fa-image"></i> Media</a></li>
             <li><a href="{{ url_for('admin_settings') }}" {% if active_page == 'settings' %}class="active"{% endif %}><i class="fas fa-cog"></i> Settings</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('admin_edit_author', author_id=session.get('user_id')) }}" {% if active_page == 'profile' %}class="active"{% endif %}><i class="fas fa-user"></i> My Profile</a></li>
             <li><a href="{{ url_for('admin_about') }}" {% if active_page == 'about' %}class="active"{% endif %}><i class="fas fa-info-circle"></i> About</a></li>
         </ul>
         <div style="position: absolute; bottom: 1rem; width: 100%; padding: 0 1.5rem;">

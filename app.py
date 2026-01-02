@@ -289,6 +289,18 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def admin_required(f):
+    """Decorator to require admin privileges."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('admin_login'))
+        if not session.get('is_admin'):
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.teardown_appcontext
 def close_db(error):
     """Close database connection."""
@@ -770,13 +782,14 @@ def admin_login():
         
         db = get_db()
         user = db.execute('''
-            SELECT * FROM authors WHERE email = ? AND is_admin = 1
+            SELECT * FROM authors WHERE email = ?
         ''', (email,)).fetchone()
         
         if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             session['user_name'] = user['name']
             session['user_email'] = user['email']
+            session['is_admin'] = bool(int(user['is_admin']))  # normalize to real bool
             flash('Successfully logged in!', 'success')
             return redirect(url_for('admin_dashboard'))
         else:
@@ -795,23 +808,15 @@ def admin_logout():
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
-    """Admin dashboard."""
+    """Dashboard (always shows full blog stats)."""
     db = get_db()
-    
-    # Get statistics
+
     total_posts = db.execute('SELECT COUNT(*) as count FROM posts').fetchone()['count']
     published_posts = db.execute("SELECT COUNT(*) as count FROM posts WHERE status = 'published'").fetchone()['count']
     draft_posts = db.execute("SELECT COUNT(*) as count FROM posts WHERE status = 'draft'").fetchone()['count']
     scheduled_posts = db.execute("SELECT COUNT(*) as count FROM posts WHERE status = 'scheduled'").fetchone()['count']
-    
-    # Get recent posts (all languages)
-    recent_posts = db.execute('''
-        SELECT * FROM posts 
-        ORDER BY created_at DESC 
-        LIMIT 10
-    ''').fetchall()
-    
-    # Add reading time to posts
+    recent_posts = db.execute("SELECT * FROM posts ORDER BY created_at DESC LIMIT 10").fetchall()
+
     posts_with_reading_time = []
     for post in recent_posts:
         post_dict = dict(post)
@@ -823,13 +828,16 @@ def admin_dashboard():
                          published_posts=published_posts,
                          draft_posts=draft_posts,
                          scheduled_posts=scheduled_posts,
-                         recent_posts=posts_with_reading_time)
+                         recent_posts=posts_with_reading_time,
+                         is_admin_user=session.get('is_admin'))
 
 @app.route('/admin/posts')
 @login_required
 def admin_posts():
     """Admin posts list page."""
     db = get_db()
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
     
     # Get filter parameters
     status_filter = request.args.get('status', 'all')
@@ -839,6 +847,10 @@ def admin_posts():
     # Build query
     query = 'SELECT * FROM posts WHERE 1=1'
     params = []
+    
+    if not is_admin_user:
+        query += ' AND author = ?'
+        params.append(current_author)
     
     if status_filter != 'all':
         query += ' AND status = ?'
@@ -868,7 +880,8 @@ def admin_posts():
                          status_filter=status_filter,
                          language_filter=language_filter,
                          search_query=search_query,
-                         languages=LANGUAGES)
+                         languages=LANGUAGES,
+                         is_admin_user=is_admin_user)
 
 @app.route('/admin/posts/delete/<int:post_id>', methods=['POST'])
 @login_required
@@ -877,13 +890,17 @@ def admin_delete_post(post_id):
     db = get_db()
     
     post = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
-    
-    if post:
-        db.execute('DELETE FROM posts WHERE id = ?', (post_id,))
-        db.commit()
-        flash(f'Post "{post["title"]}" deleted successfully!', 'success')
-    else:
+    if not post:
         flash('Post not found', 'error')
+        return redirect(url_for('admin_posts'))
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+    if not is_admin_user and post['author'] != current_author:
+        abort(403)
+    
+    db.execute('DELETE FROM posts WHERE id = ?', (post_id,))
+    db.commit()
+    flash(f'Post "{post["title"]}" deleted successfully!', 'success')
     
     return redirect(url_for('admin_posts'))
 
@@ -892,10 +909,15 @@ def admin_delete_post(post_id):
 def admin_new_post():
     """Create a new post."""
     db = get_db()
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
     
-    # Get all authors
-    authors = db.execute('SELECT name FROM authors ORDER BY name').fetchall()
-    authors_list = [dict(a)['name'] for a in authors]
+    # Get authors list (restricted for non-admins)
+    if is_admin_user:
+        authors = db.execute('SELECT name FROM authors ORDER BY name').fetchall()
+        authors_list = [dict(a)['name'] for a in authors]
+    else:
+        authors_list = [current_author] if current_author else []
     
     if request.method == 'POST':
         title = request.form.get('title')
@@ -905,7 +927,7 @@ def admin_new_post():
         language = request.form.get('language')
         status = request.form.get('status')
         publish_date = request.form.get('publish_date')
-        author = request.form.get('author')
+        author = request.form.get('author') if is_admin_user else current_author
         
         # Validation
         if not all([title, slug, content, language, status, publish_date, author]):
@@ -994,9 +1016,19 @@ def admin_edit_post(post_id):
         flash('Post not found', 'error')
         return redirect(url_for('admin_posts'))
     
-    # Get all authors
-    authors = db.execute('SELECT name FROM authors ORDER BY name').fetchall()
-    authors_list = [dict(a)['name'] for a in authors]
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+    
+    # Only admins or the post author can edit
+    if not is_admin_user and post['author'] != current_author:
+        abort(403)
+    
+    # Get authors list
+    if is_admin_user:
+        authors = db.execute('SELECT name FROM authors ORDER BY name').fetchall()
+        authors_list = [dict(a)['name'] for a in authors]
+    else:
+        authors_list = [current_author] if current_author else []
     
     if request.method == 'POST':
         title = request.form.get('title')
@@ -1006,7 +1038,7 @@ def admin_edit_post(post_id):
         language = request.form.get('language')
         status = request.form.get('status')
         publish_date = request.form.get('publish_date')
-        author = request.form.get('author')
+        author = request.form.get('author') if is_admin_user else current_author
         
         # Validation
         if not all([title, slug, content, language, status, publish_date, author]):
@@ -1093,6 +1125,7 @@ def admin_edit_post(post_id):
 
 @app.route('/admin/media', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def admin_media():
     """Manage media files."""
     uploads_dir = os.path.join('static', 'uploads')
@@ -1148,6 +1181,7 @@ def admin_media():
 
 @app.route('/admin/media/delete/<filename>', methods=['POST'])
 @login_required
+@admin_required
 def admin_delete_media(filename):
     """Delete a media file."""
     try:
@@ -1169,14 +1203,17 @@ def admin_delete_media(filename):
 @app.route('/admin/authors', methods=['GET'])
 @login_required
 def admin_authors():
-    """List all authors."""
+    """List authors (admins see all, authors see only themselves)."""
     db = get_db()
-    authors = db.execute('SELECT * FROM authors ORDER BY name').fetchall()
-    
-    return render_template('admin/authors.html', authors=authors)
+    if session.get('is_admin'):
+        authors = db.execute('SELECT * FROM authors ORDER BY name').fetchall()
+    else:
+        authors = db.execute('SELECT * FROM authors WHERE id = ?', (session.get('user_id'),)).fetchall()
+    return render_template('admin/authors.html', authors=authors, is_admin_user=session.get('is_admin'))
 
 @app.route('/admin/authors/new', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def admin_new_author():
     """Create a new author."""
     if request.method == 'POST':
@@ -1244,6 +1281,9 @@ def admin_edit_author(author_id):
     if not author:
         flash('Author not found', 'error')
         return redirect(url_for('admin_authors'))
+    # Only admins or the author themselves can edit
+    if not session.get('is_admin') and author['id'] != session.get('user_id'):
+        abort(403)
     
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
@@ -1257,6 +1297,8 @@ def admin_edit_author(author_id):
         github = request.form.get('github', '').strip()
         website = request.form.get('website', '').strip()
         is_admin = 1 if request.form.get('is_admin') == 'on' else 0
+        if not session.get('is_admin'):
+            is_admin = author['is_admin']  # Non-admins cannot elevate
         
         # Validation
         if not all([name, email]):
@@ -1312,6 +1354,7 @@ def admin_edit_author(author_id):
 
 @app.route('/admin/authors/delete/<int:author_id>', methods=['POST'])
 @login_required
+@admin_required
 def admin_delete_author(author_id):
     """Delete an author."""
     db = get_db()
@@ -1338,6 +1381,7 @@ def admin_delete_author(author_id):
 
 @app.route('/admin/settings', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def admin_settings():
     """Manage blog settings."""
     if request.method == 'POST':
