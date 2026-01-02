@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  blog:
+    build: .
+    container_name: multilingual-blog
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - APP_ID=${APP_ID:-multilingual-blog}
+      - APP_NAME=${APP_NAME:-My Multilingual Blog}
+      - DATABASE_PATH=${DATABASE_PATH:-blog.db}
+      - FLASK_DEBUG=${FLASK_DEBUG:-False}
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-5000}
+    volumes:
+      # Persist database
+      - ./blog.db:/app/blog.db
+      # Persist uploaded media
+      - ./static/uploads:/app/static/uploads
+      - ./static/authors:/app/static/authors
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/en"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

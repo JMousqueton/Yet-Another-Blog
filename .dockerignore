@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Database (optional - uncomment if you want fresh DB in container)
+# blog.db
+blog.db.OLD
+
+# Logs
+*.log
+
+# Environment
+.env
+
+# Development
+start.sh
+
+# Backups
+scripts/backup.json
+
+# Documentation
+README.md
+DEPLOYMENT.md
+LICENSE
