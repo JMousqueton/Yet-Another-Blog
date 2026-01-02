@@ -610,7 +610,7 @@ def before_request():
     if (request.path.startswith('/static') or 
         request.path.startswith('/set-language') or
         request.path.startswith('/admin') or
-        request.path in ['/sitemap.xml', '/robots.txt']):
+        request.path in ['/sitemap.xml', '/robots.txt', '/rss']):
         return
     
     # Check if path starts with language code
