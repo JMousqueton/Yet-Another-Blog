@@ -1,10 +1,17 @@
 import sqlite3
+import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 
 def init_database():
     """Initialize the SQLite database with the posts table."""
-    conn = sqlite3.connect('blog.db')
+    # Ensure the directory exists and is writable
+    db_path = os.getenv('DATABASE_PATH', 'blog.db')
+    db_dir = os.path.dirname(db_path)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+    
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     # Create authors table
