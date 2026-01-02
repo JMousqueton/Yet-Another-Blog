@@ -148,11 +148,17 @@ blog/
 
 ### Admin Routes
 - `/admin/login` - Admin login
-- `/admin/dashboard` - Admin overview
-- `/admin/posts` - Post management
-- `/admin/authors` - Author management
-- `/admin/media` - Media library
-- `/admin/settings` - Global settings
+- `/admin/dashboard` - Overview (shows full blog stats for all)
+- `/admin/posts` - Post management (authors see only their posts; admins see all)
+- `/admin/authors` - Author management (admins only)
+- `/admin/media` - Media library (admins only)
+- `/admin/settings` - Global settings (admins only)
+- `/admin/about` - About page
+- `/admin/authors/edit/{id}` - My Profile (every logged-in user can edit their profile)
+
+### Admin vs Author Capabilities
+- **Admins:** Full access to dashboard, all posts, authors, media, settings, about, and profile
+- **Authors:** Access to dashboard (global stats), their own posts (create/edit/delete), About page, and their profile page
 
 ## 🗄️ Database Schema
 
