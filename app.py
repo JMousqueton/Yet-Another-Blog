@@ -584,6 +584,46 @@ def post_detail(lang, slug):
                          blog_title=blog_title,
                          blog_subtitle=blog_subtitle)
 
+@app.route('/<lang>/post/<slug>/amp')
+def post_detail_amp(lang, slug):
+    """AMP version of individual post page."""
+    if lang not in LANGUAGES:
+        return redirect(url_for('index', lang=DEFAULT_LANGUAGE))
+    
+    # Check if language is enabled
+    enabled_languages = get_enabled_languages()
+    if lang not in enabled_languages:
+        abort(404)
+    
+    g.language = lang
+    blog_title = get_setting(f'blog_title_{lang}', get_setting('blog_title', 'My Blog'))
+    db = get_db()
+    
+    # Get post
+    now = datetime.now().isoformat()
+    post = db.execute('''
+        SELECT * FROM posts 
+        WHERE language = ? AND slug = ? AND status = 'published' AND publish_date <= ?
+    ''', (lang, slug, now)).fetchone()
+    
+    if not post:
+        abort(404)
+
+    # Calculate reading time
+    post = dict(post)
+    post['reading_time'] = calculate_reading_time(post['content'])
+    
+    # Get author information if available
+    author_info = None
+    if post.get('author'):
+        author_info = db.execute('SELECT * FROM authors WHERE name = ?', (post['author'],)).fetchone()
+    
+    return render_template('post_amp.html', 
+                         post=post, 
+                         author=author_info,
+                         lang=lang,
+                         blog_title=blog_title)
+
 @app.route('/<lang>/rss')
 def rss_feed(lang):
     """Generate RSS feed for the specified language."""

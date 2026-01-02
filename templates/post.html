@@ -4,6 +4,10 @@
 
 {% block meta_tags %}
     {{ super() }}
+    
+    <!-- AMP version -->
+    <link rel="amphtml" href="{{ request.url_root }}{{ lang }}/post/{{ post.slug }}/amp">
+    
     <meta property="og:type" content="article">
     <meta property="og:url" content="{{ request.url }}">
     <meta property="og:title" content="{{ post.title }}">
