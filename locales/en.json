@@ -14,7 +14,9 @@
     "already_voted": "You have already voted on this post",
     "about_author": "About the Author",
     "view_all_posts": "View all posts by this author",
-    "author_fallback_bio": "Passionate writer and content creator."
+    "author_fallback_bio": "Passionate writer and content creator.",
+    "previous_post": "Previous Post",
+    "next_post": "Next Post"
   },
   "author": {
     "posts_by": "Posts by",

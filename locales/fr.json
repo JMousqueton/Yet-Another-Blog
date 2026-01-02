@@ -14,7 +14,9 @@
     "already_voted": "Vous avez déjà voté sur cet article",
     "about_author": "À propos de l'auteur",
     "view_all_posts": "Voir tous les articles de cet auteur",
-    "author_fallback_bio": "Écrivain passionné et créateur de contenu."
+    "author_fallback_bio": "Écrivain et créateur de contenu passionné.",
+    "previous_post": "Article Précédent",
+    "next_post": "Article Suivant"
   },
   "author": {
     "posts_by": "Articles de",

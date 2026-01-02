@@ -14,7 +14,9 @@
     "already_voted": "Sie haben bereits auf diesen Beitrag abgestimmt",
     "about_author": "Über den Autor",
     "view_all_posts": "Alle Beiträge dieses Autors ansehen",
-    "author_fallback_bio": "Leidenschaftlicher Autor und Content-Ersteller."
+    "author_fallback_bio": "Leidenschaftlicher Autor und Content-Ersteller.",
+    "previous_post": "Vorheriger Beitrag",
+    "next_post": "Nächster Beitrag"
   },
   "author": {
     "posts_by": "Beiträge von",
