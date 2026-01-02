@@ -46,6 +46,20 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 - **Environment Config**: `.env` file support
 - **Clean Architecture**: Modular design with utilities
 
+## 🖼️ Screenshots
+
+| Language Picker | Admin Login | Admin Dashboard |
+| --- | --- | --- |
+| ![Language picker](.github/screenshots/Chooselang.png) | ![Admin login](.github/screenshots/adminlogin.png) | ![Admin dashboard](.github/screenshots/admindashboard.png) |
+
+| Posts | Authors | Media |
+| --- | --- | --- |
+| ![Admin posts](.github/screenshots/adminposts.png) | ![Admin authors](.github/screenshots/adminauthors.png) | ![Admin media](.github/screenshots/adminmedia.png) |
+
+| Settings | Post Page |
+| --- | --- |
+| ![Admin settings](.github/screenshots/adminsettings.png) | ![Post page](.github/screenshots/post.png) |
+
 ## 🚀 Quick Start
 
 ### Prerequisites
