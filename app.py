@@ -252,10 +252,14 @@ def inject_global_settings():
     # Get translations for current language with double fallback to English
     translations = TRANSLATIONS.get(current_lang, TRANSLATIONS.get('en', {}))
     
+    # Get blog title for current language
+    blog_title = get_setting(f'blog_title_{current_lang}') or get_setting('blog_title_en') or 'My Blog'
+    
     return {
         'global_favicon': get_setting('favicon', 'favicon.ico'),
         'global_template_css': get_setting('template_css', 'default.css'),
         'analytics_code': get_setting('analytics_code', ''),
+        'blog_title': blog_title,
         't': translations,
         'lang': current_lang  # Ensure lang is always available in templates
     }
@@ -914,8 +918,8 @@ def page_not_found(e):
     # Fall back to the first enabled language if the requested one is disabled
     if lang not in enabled_languages:
         lang = next(iter(enabled_languages.keys()), DEFAULT_LANGUAGE)
-    # Try to get language-specific title, fall back to generic, then to default
-    blog_name = get_setting(f'blog_title_{lang}') or get_setting('blog_title') or 'My Blog'
+    # Try to get language-specific title, fall back to English, then to default
+    blog_name = get_setting(f'blog_title_{lang}') or get_setting('blog_title_en') or 'My Blog'
     return render_template('404.html', lang=lang, languages=enabled_languages, blog_name=blog_name), 404
 
 @app.errorhandler(429)
@@ -926,8 +930,8 @@ def ratelimit_handler(e):
     # Fall back to the first enabled language if the requested one is disabled
     if lang not in enabled_languages:
         lang = next(iter(enabled_languages.keys()), DEFAULT_LANGUAGE)
-    # Try to get language-specific title, fall back to generic, then to default
-    blog_name = get_setting(f'blog_title_{lang}') or get_setting('blog_title') or 'My- Blog'
+    # Try to get language-specific title, fall back to English, then to default
+    blog_name = get_setting(f'blog_title_{lang}') or get_setting('blog_title_en') or 'My Blog'
     return render_template('429.html', lang=lang, languages=enabled_languages, blog_name=blog_name), 429
 
 @app.route('/robots.txt')
