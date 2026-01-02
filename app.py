@@ -1532,10 +1532,10 @@ def admin_about():
     repo_url = "https://github.com/JMousqueton/Yet-Another-Blog"
     highlights = [
         {"icon": "fa-language", "title": "Multilingual", "text": "English, French, German with JSON-based i18n and fallbacks."},
-        {"icon": "fa-gauge-high", "title": "Performance", "text": "Lazy-loading images, smooth transitions, and optimized assets."},
+        {"icon": "fa-gauge-high", "title": "Performance", "text": "AMP support, lazy-loading images, smooth transitions, and optimized assets."},
         {"icon": "fa-shield-alt", "title": "Security", "text": "CSRF protection, rate limiting, CSP headers, and secure auth."},
         {"icon": "fa-database", "title": "Data Safety", "text": "Export/import scripts, scheduled publishing, and backups."},
-        {"icon": "fa-pen", "title": "Authoring", "text": "WYSIWYG editor, drafts/scheduled posts, author bios and media."},
+        {"icon": "fa-pen", "title": "Authoring", "text": "WYSIWYG editor, featured posts, drafts/scheduled posts, and media."},
         {"icon": "fa-rss", "title": "Reach", "text": "Per-language RSS, SEO metadata, sitemaps, and social sharing."},
     ]
     return render_template('admin/about.html', repo_url=repo_url, highlights=highlights)

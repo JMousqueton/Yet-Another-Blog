@@ -13,6 +13,7 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 ### 📝 Content Management
 - **Full Admin Panel**: Complete WYSIWYG editor with markdown support
 - **Post Management**: Draft, Published, and Scheduled statuses
+- **Featured Posts**: Pin important articles to the top of the homepage
 - **Author Profiles**: Bio, social links, and profile images
 - **Media Library**: Upload and manage images
 - **Featured Images**: Support for post and author images
@@ -30,6 +31,7 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 ### 🚀 Performance & SEO
 - **RSS Feeds**: Per-language RSS generation
 - **SEO Optimized**: Meta tags, Open Graph, Twitter Cards
+- **AMP Support**: Accelerated Mobile Pages for lightning-fast mobile experience
 - **Sitemap**: Automatic XML sitemap generation
 - **Robots.txt**: Search engine configuration
 - **Page Transitions**: Smooth fade-in/out effects
