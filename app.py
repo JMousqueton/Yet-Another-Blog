@@ -910,7 +910,8 @@ def rss_feed(lang):
     fg.title(f'{blog_title} - {LANGUAGES[lang]["name"]}')
     fg.link(href=request.url_root, rel='alternate')
     blog_subtitle = get_setting(f'blog_subtitle_{lang}', get_setting('blog_subtitle_en', ''))
-    fg.description(blog_subtitle or f'Latest posts from my multilingual blog in {LANGUAGES[lang]["name"]}')
+    subtitle_plain = re.sub('<[^<]+?>', '', blog_subtitle) if blog_subtitle else ''
+    fg.description(subtitle_plain or f'Latest posts from my multilingual blog in {LANGUAGES[lang]["name"]}')
     fg.language(lang)
     # Feed-level author tag
     fg.author({'name': blog_title})
