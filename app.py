@@ -927,7 +927,7 @@ def ratelimit_handler(e):
     if lang not in enabled_languages:
         lang = next(iter(enabled_languages.keys()), DEFAULT_LANGUAGE)
     # Try to get language-specific title, fall back to generic, then to default
-    blog_name = get_setting(f'blog_title_{lang}') or get_setting('blog_title') or 'My Blog'
+    blog_name = get_setting(f'blog_title_{lang}') or get_setting('blog_title') or 'My- Blog'
     return render_template('429.html', lang=lang, languages=enabled_languages, blog_name=blog_name), 429
 
 @app.route('/robots.txt')
