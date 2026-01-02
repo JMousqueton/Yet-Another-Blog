@@ -254,6 +254,7 @@ def inject_global_settings():
     return {
         'global_favicon': get_setting('favicon', 'favicon.ico'),
         'global_template_css': get_setting('template_css', 'default.css'),
+        'analytics_code': get_setting('analytics_code', ''),
         't': translations,
         'lang': current_lang  # Ensure lang is always available in templates
     }

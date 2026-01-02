@@ -44,6 +44,11 @@
     
     {% block extra_css %}{% endblock %}
     
+    <!-- Analytics Code -->
+    {% if analytics_code %}
+    {{ analytics_code|safe }}
+    {% endif %}
+    
     <style>
         /* Code Syntax Highlighting */
         .highlight {
