@@ -12,3 +12,4 @@ blog.db.OLD
 static/uploads/*.png
 static/uploads/*.jpeg
 static/authors/*.png
+static/authors/*.jpg
