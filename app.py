@@ -931,7 +931,7 @@ def rss_feed(lang):
         fe.description(post['excerpt'] or post['content'][:200])
         fe.pubDate(datetime.fromisoformat(post['publish_date']).replace(tzinfo=pytz.UTC))
         if post['author']:
-            fe.author({'name': post['author']})
+            fe.author({'name': post['author'], 'email': 'noemail@confidential'})
         # Add featured image if available
         if post['featured_image']:
             image_url = request.url_root + f'static/uploads/{post["featured_image"]}'
