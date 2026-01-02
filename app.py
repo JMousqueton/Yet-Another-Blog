@@ -5,6 +5,7 @@ from feedgen.feed import FeedGenerator
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 import pytz
 import os
 from dotenv import load_dotenv
@@ -25,6 +26,8 @@ from flask_limiter.util import get_remote_address
 load_dotenv()
 
 app = Flask(__name__)
+# Trust proxy headers for real client IP and scheme (1 proxy hop)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-this')
 app.config['APP_ID'] = os.getenv('APP_ID', 'multilingual-blog')
 app.config['APP_NAME'] = os.getenv('APP_NAME', 'My Multilingual Blog')
