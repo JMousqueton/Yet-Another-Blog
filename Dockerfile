@@ -31,6 +31,5 @@ RUN mkdir -p static/uploads static/authors
 # Expose port
 EXPOSE 5000
 
-# Run database initialization if blog.db doesn't exist
-# Then start the application
-CMD ["sh", "-c", "python init_db.py 2>/dev/null || true && python app.py"]
+# Run database initialization first, then start the application
+CMD ["sh", "-c", "python init_db.py && python app.py"]
