@@ -181,7 +181,7 @@ load_translations()
 # File upload configuration
 UPLOAD_FOLDER = os.path.join('static', 'authors')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 
 # Create upload folders if they don't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
