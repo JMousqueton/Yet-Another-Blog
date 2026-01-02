@@ -17,6 +17,7 @@ import json
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import xml.etree.ElementTree as ET
 from flask_wtf.csrf import CSRFProtect
 import re
 from flask_limiter import Limiter
@@ -894,11 +895,12 @@ def rss_feed(lang):
     db = get_db()
     now = datetime.now().isoformat()
     
-    # Get published posts
+    # Get published posts with author email (if available)
     posts = db.execute('''
-        SELECT * FROM posts 
-        WHERE language = ? AND status = 'published' AND publish_date <= ?
-        ORDER BY publish_date DESC
+        SELECT p.*, a.email as author_email FROM posts p
+        LEFT JOIN authors a ON p.author = a.name
+        WHERE p.language = ? AND p.status = 'published' AND p.publish_date <= ?
+        ORDER BY p.publish_date DESC
         LIMIT 20
     ''', (lang, now)).fetchall()
     
@@ -907,8 +909,19 @@ def rss_feed(lang):
     blog_title = get_setting(f'blog_title_{lang}') or get_setting('blog_title_en') or 'My Blog'
     fg.title(f'{blog_title} - {LANGUAGES[lang]["name"]}')
     fg.link(href=request.url_root, rel='alternate')
-    fg.description(f'Latest posts from my multilingual blog in {LANGUAGES[lang]["name"]}')
+    blog_subtitle = get_setting(f'blog_subtitle_{lang}', get_setting('blog_subtitle_en', ''))
+    fg.description(blog_subtitle or f'Latest posts from my multilingual blog in {LANGUAGES[lang]["name"]}')
     fg.language(lang)
+    # Feed-level author tag
+    fg.author({'name': blog_title})
+    # lastBuildDate based on latest publish date, fallback to now
+    if posts:
+        latest_dt = max(datetime.fromisoformat(p['publish_date']) for p in posts)
+        if latest_dt.tzinfo is None:
+            latest_dt = latest_dt.replace(tzinfo=pytz.UTC)
+        fg.lastBuildDate(latest_dt)
+    else:
+        fg.lastBuildDate(datetime.now(pytz.UTC))
     
     for post in posts:
         fe = fg.add_entry()
@@ -923,7 +936,23 @@ def rss_feed(lang):
             image_url = request.url_root + f'static/uploads/{post["featured_image"]}'
             fe.enclosure(url=image_url, length='0', type='image/jpeg')
     
-    response = make_response(fg.rss_str())
+    # Post-process RSS to ensure author name-only tags per item
+    rss_bytes = fg.rss_str()
+    try:
+        root = ET.fromstring(rss_bytes)
+        items = root.find('channel').findall('item') if root.find('channel') is not None else []
+        for item, post in zip(items, posts):
+            # Remove any existing author tags
+            for a in item.findall('author'):
+                item.remove(a)
+            if post['author']:
+                author_el = ET.SubElement(item, 'author')
+                author_el.text = post['author']
+        rss_bytes = ET.tostring(root, encoding='utf-8', xml_declaration=True)
+    except Exception as e:
+        print(f"RSS post-process error (author tags): {e}")
+        # Fallback to original feed
+    response = make_response(rss_bytes)
     response.headers['Content-Type'] = 'application/rss+xml; charset=utf-8'
     return response
 
