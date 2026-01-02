@@ -33,6 +33,11 @@ app.config['APP_ID'] = os.getenv('APP_ID', 'multilingual-blog')
 app.config['APP_NAME'] = os.getenv('APP_NAME', 'My Multilingual Blog')
 app.config['WTF_CSRF_TIME_LIMIT'] = None  # CSRF tokens don't expire
 
+# Session cookie security
+app.config['SESSION_COOKIE_SECURE'] = not app.debug  # HTTPS only in production
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # No JavaScript access
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+
 # Initialize CSRF Protection
 csrf = CSRFProtect(app)
 
@@ -1836,6 +1841,7 @@ def admin_settings():
 @app.route('/admin/api/export-database')
 @login_required
 @admin_required
+@limiter.limit('5 per day')  # Prevent abuse of database exports
 def api_export_database():
     """Export database to JSON for backup."""
     try:
@@ -1886,6 +1892,7 @@ def api_export_database():
 @app.route('/admin/api/import-database', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit('5 per day')  # Prevent abuse of database imports
 @csrf.exempt
 def api_import_database():
     """Import database from JSON backup."""
@@ -1993,6 +2000,7 @@ def admin_statistics():
 
 @app.route('/admin/api/post-stats/<int:post_id>')
 @login_required
+@limiter.limit('30 per minute')  # Allow frequent stats checks
 def api_post_stats(post_id):
     """Get detailed stats for a specific post."""
     db = get_db()
@@ -2025,6 +2033,7 @@ def api_post_stats(post_id):
 
 @app.route('/admin/api/autosave', methods=['POST'])
 @login_required
+@limiter.limit('60 per minute')  # Allow frequent autosaves
 @csrf.exempt
 def api_autosave():
     """Auto-save post draft to prevent data loss."""
