@@ -102,6 +102,16 @@
 {% endblock %}
 
 {% block content %}
+    <!-- Header with Create Author Button -->
+    {% if session.get('is_admin') %}
+    <div class="mb-4 d-flex justify-content-between align-items-center">
+        <div></div>
+        <a href="{{ url_for('admin_new_author') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create User
+        </a>
+    </div>
+    {% endif %}
+
     <!-- Authors Grid -->
         {% if authors %}
         <div class="author-grid">
