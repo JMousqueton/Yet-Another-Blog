@@ -5,11 +5,18 @@ from werkzeug.security import generate_password_hash
 
 def init_database():
     """Initialize the SQLite database with the posts table."""
-    # Ensure the directory exists and is writable
+    # Get database path from environment or use default
     db_path = os.getenv('DATABASE_PATH', 'blog.db')
+    
+    # If db_path is just a filename, use current directory
+    if not os.path.isabs(db_path):
+        db_path = os.path.join(os.getcwd(), db_path)
+    
     db_dir = os.path.dirname(db_path)
+    
+    # Create directory if it doesn't exist
     if db_dir and not os.path.exists(db_dir):
-        os.makedirs(db_dir, exist_ok=True)
+        os.makedirs(db_dir, mode=0o755, exist_ok=True)
     
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
