@@ -952,19 +952,18 @@ def ratelimit_handler(e):
 @app.route('/robots.txt')
 def robots():
     """Serve robots.txt for SEO."""
-    return Response('''User-agent: *
-Allow: /
-Allow: /en/
-Allow: /fr/
-Allow: /de/
-Allow: /en/rss
-Allow: /fr/rss
-Allow: /de/rss
-Disallow: /admin/
-Disallow: /set-language/
-
-Sitemap: https://''' + request.host + '''/sitemap.xml
-''', mimetype='text/plain')
+    enabled_languages = get_enabled_languages().keys()
+    lines = ["User-agent: *", "Allow: /"]
+    for lang in enabled_languages:
+        lines.append(f"Allow: /{lang}/")
+        lines.append(f"Allow: /{lang}/rss")
+    lines.extend([
+        "Disallow: /admin/",
+        "Disallow: /set-language/",
+        "",
+        f"Sitemap: https://{request.host}/sitemap.xml"
+    ])
+    return Response("\n".join(lines), mimetype='text/plain')
 
 @app.route('/sitemap.xml')
 def sitemap():
