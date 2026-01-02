@@ -876,7 +876,8 @@ def rss_feed(lang):
     
     # Create feed
     fg = FeedGenerator()
-    fg.title(f'My Blog - {LANGUAGES[lang]["name"]}')
+    blog_title = get_setting(f'blog_title_{lang}') or get_setting('blog_title_en') or 'My Blog'
+    fg.title(f'{blog_title} - {LANGUAGES[lang]["name"]}')
     fg.link(href=request.url_root, rel='alternate')
     fg.description(f'Latest posts from my multilingual blog in {LANGUAGES[lang]["name"]}')
     fg.language(lang)
@@ -889,6 +890,10 @@ def rss_feed(lang):
         fe.pubDate(datetime.fromisoformat(post['publish_date']).replace(tzinfo=pytz.UTC))
         if post['author']:
             fe.author({'name': post['author']})
+        # Add featured image if available
+        if post['featured_image']:
+            image_url = request.url_root + f'static/uploads/{post["featured_image"]}'
+            fe.enclosure(url=image_url, length='0', type='image/jpeg')
     
     response = make_response(fg.rss_str())
     response.headers['Content-Type'] = 'application/rss+xml; charset=utf-8'
