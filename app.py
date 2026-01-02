@@ -17,7 +17,6 @@ import json
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import xml.etree.ElementTree as ET
 from flask_wtf.csrf import CSRFProtect
 import re
 from flask_limiter import Limiter
@@ -937,22 +936,7 @@ def rss_feed(lang):
             image_url = request.url_root + f'static/uploads/{post["featured_image"]}'
             fe.enclosure(url=image_url, length='0', type='image/jpeg')
     
-    # Post-process RSS to ensure author name-only tags per item
     rss_bytes = fg.rss_str()
-    try:
-        root = ET.fromstring(rss_bytes)
-        items = root.find('channel').findall('item') if root.find('channel') is not None else []
-        for item, post in zip(items, posts):
-            # Remove any existing author tags
-            for a in item.findall('author'):
-                item.remove(a)
-            if post['author']:
-                author_el = ET.SubElement(item, 'author')
-                author_el.text = post['author']
-        rss_bytes = ET.tostring(root, encoding='utf-8', xml_declaration=True)
-    except Exception as e:
-        print(f"RSS post-process error (author tags): {e}")
-        # Fallback to original feed
     response = make_response(rss_bytes)
     response.headers['Content-Type'] = 'application/rss+xml; charset=utf-8'
     return response
