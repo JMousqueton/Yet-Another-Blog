@@ -397,6 +397,15 @@ def update_scheduled_posts():
 # Run database migrations on app startup
 try:
     migrate_database()
+    # Add featured column if it doesn't exist
+    db = get_db()
+    try:
+        db.execute("ALTER TABLE posts ADD COLUMN featured INTEGER DEFAULT 0")
+        db.commit()
+        print("Added 'featured' column to posts table")
+    except sqlite3.OperationalError:
+        # Column already exists
+        pass
 except Exception as e:
     print(f"Migration error: {e}")
 
@@ -465,6 +474,21 @@ def index(lang, page=1):
     # Get published posts for this language
     now = datetime.now().isoformat()
     
+    # Get featured posts for homepage (not paginated)
+    featured_posts = []
+    if page == 1:  # Only show featured posts on first page
+        featured_posts_raw = db.execute('''
+            SELECT * FROM posts 
+            WHERE language = ? AND status = 'published' AND publish_date <= ? AND featured = 1
+            ORDER BY publish_date DESC
+            LIMIT 3
+        ''', (lang, now)).fetchall()
+        
+        for post in featured_posts_raw:
+            post_dict = dict(post)
+            post_dict['reading_time'] = calculate_reading_time(post_dict['content'])
+            featured_posts.append(post_dict)
+    
     if search_query:
         # Count total posts for pagination
         total_count = db.execute('''
@@ -510,7 +534,8 @@ def index(lang, page=1):
         posts_with_reading_time.append(post_dict)
     
     return render_template('index.html', 
-                         posts=posts_with_reading_time, 
+                         posts=posts_with_reading_time,
+                         featured_posts=featured_posts,
                          lang=lang, 
                          languages=get_enabled_languages(), 
                          search_query=search_query,
@@ -1021,10 +1046,13 @@ def admin_new_post():
                     except Exception as e:
                         flash(f'Error processing image: {str(e)}', 'warning')
             
+            # Handle featured checkbox
+            featured = 1 if request.form.get('featured') else 0
+            
             db.execute('''
-                INSERT INTO posts (title, slug, content, excerpt, language, status, publish_date, author, featured_image, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (title, slug, content, excerpt, language, status, publish_date, author, featured_image,
+                INSERT INTO posts (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured,
                   datetime.now().isoformat(), datetime.now().isoformat()))
             db.commit()
             
@@ -1134,14 +1162,17 @@ def admin_edit_post(post_id):
                     except Exception as e:
                         flash(f'Error processing image: {str(e)}', 'warning')
             
+            # Handle featured checkbox
+            featured = 1 if request.form.get('featured') else 0
+            
             db.execute('''
                 UPDATE posts SET 
                     title = ?, slug = ?, content = ?, excerpt = ?, 
                     language = ?, status = ?, publish_date = ?, author = ?, 
-                    featured_image = ?, updated_at = ?
+                    featured_image = ?, featured = ?, updated_at = ?
                 WHERE id = ?
             ''', (title, slug, content, excerpt, language, status, publish_date, author, 
-                  featured_image, datetime.now().isoformat(), post_id))
+                  featured_image, featured, datetime.now().isoformat(), post_id))
             db.commit()
             
             flash(f'Post "{title}" updated successfully!', 'success')

@@ -150,6 +150,40 @@ input:checked + .slider:before {
     margin-right: 5px;
 }
 
+/* Featured Posts Styling */
+.featured-posts {
+    margin-bottom: 3rem;
+}
+
+.featured-post-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    background-color: var(--card-bg);
+    overflow: hidden;
+}
+
+.featured-post-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3) !important;
+}
+
+.featured-post-card .card-title {
+    color: var(--primary-color);
+    margin-bottom: 0.75rem;
+}
+
+.featured-post-card .card-title a {
+    color: inherit;
+}
+
+.featured-post-card .card-title a:hover {
+    color: var(--secondary-color);
+}
+
+.featured-post-card .badge {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+}
+
 footer {
     background-color: var(--footer-bg);
     color: white;

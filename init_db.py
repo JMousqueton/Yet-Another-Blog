@@ -42,6 +42,7 @@ def init_database():
             author TEXT,
             excerpt TEXT,
             featured_image TEXT,
+            featured INTEGER DEFAULT 0,
             UNIQUE(slug, language),
             FOREIGN KEY(author) REFERENCES authors(name)
         )
