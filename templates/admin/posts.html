@@ -107,7 +107,7 @@
                             <th>Language</th>
                             <th>Status</th>
                             <th>Reading Time</th>
-                            <th>Published</th>
+                            <th>Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -133,6 +133,8 @@
                             <td>{{ post.reading_time }} min</td>
                             <td>
                                 <small>{{ post.publish_date[:10] }}</small>
+                                <br>
+                                <small class="text-muted">{{ post.publish_date[11:16] }}</small>
                             </td>
                             <td>
                                 <div class="btn-group" role="group">

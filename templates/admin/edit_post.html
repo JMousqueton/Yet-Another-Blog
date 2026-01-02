@@ -53,6 +53,41 @@
             float: right;
         }
         
+        .autosave-status {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-size: 0.875rem;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .autosave-status.show {
+            opacity: 1;
+        }
+        
+        .autosave-status.saving {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+        }
+        
+        .autosave-status.saved {
+            background: #d4edda;
+            border: 1px solid #28a745;
+            color: #155724;
+        }
+        
+        .autosave-status.error {
+            background: #f8d7da;
+            border: 1px solid #dc3545;
+            color: #721c24;
+        }
+        
         .edit-info {
             background: #e7f3ff;
             border-left: 4px solid #007bff;
@@ -64,6 +99,11 @@
 {% endblock %}
 
 {% block content %}
+    <!-- Auto-save status indicator -->
+    <div id="autosaveStatus" class="autosave-status">
+        <i class="fas fa-spinner fa-spin"></i> <span id="autosaveText">Saving...</span>
+    </div>
+
     <!-- Post Form -->
         <div class="form-card">
             <div class="edit-info">
@@ -324,6 +364,109 @@
         
         // Initialize count
         document.getElementById('contentCount').textContent = easyMDE.value().length + ' characters';
+        
+        // Auto-save functionality
+        let autosaveTimer = null;
+        const currentPostId = {{ post.id }};
+        const AUTOSAVE_DELAY = 3000; // 3 seconds after last change
+        
+        function showAutosaveStatus(status, message) {
+            const statusDiv = document.getElementById('autosaveStatus');
+            const statusText = document.getElementById('autosaveText');
+            const icon = statusDiv.querySelector('i');
+            
+            // Remove all status classes
+            statusDiv.classList.remove('saving', 'saved', 'error', 'show');
+            
+            // Add appropriate class and update text
+            statusDiv.classList.add(status, 'show');
+            statusText.textContent = message;
+            
+            // Update icon
+            if (status === 'saving') {
+                icon.className = 'fas fa-spinner fa-spin';
+            } else if (status === 'saved') {
+                icon.className = 'fas fa-check-circle';
+            } else if (status === 'error') {
+                icon.className = 'fas fa-exclamation-circle';
+            }
+            
+            // Hide after 3 seconds (except for saving status)
+            if (status !== 'saving') {
+                setTimeout(() => {
+                    statusDiv.classList.remove('show');
+                }, 3000);
+            }
+        }
+        
+        function autoSaveDraft() {
+            const title = document.getElementById('title').value.trim();
+            const content = easyMDE.value().trim();
+            const slug = document.getElementById('slug').value.trim();
+            const excerpt = document.getElementById('excerpt').value.trim();
+            const language = document.getElementById('language').value;
+            const author = document.getElementById('author') ? document.getElementById('author').value : '{{ post.author }}';
+            
+            // Only save if there's at least a title or content
+            if (!title && !content) {
+                return;
+            }
+            
+            showAutosaveStatus('saving', 'Saving draft...');
+            
+            fetch('/admin/api/autosave', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    post_id: currentPostId,
+                    title: title,
+                    content: content,
+                    slug: slug,
+                    excerpt: excerpt,
+                    language: language,
+                    author: author
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const now = new Date().toLocaleTimeString();
+                    showAutosaveStatus('saved', `Saved at ${now}`);
+                } else {
+                    showAutosaveStatus('error', 'Save failed: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Auto-save error:', error);
+                showAutosaveStatus('error', 'Save failed - please check your connection');
+            });
+        }
+        
+        function scheduleAutosave() {
+            // Clear existing timer
+            if (autosaveTimer) {
+                clearTimeout(autosaveTimer);
+            }
+            
+            // Schedule new save
+            autosaveTimer = setTimeout(autoSaveDraft, AUTOSAVE_DELAY);
+        }
+        
+        // Trigger auto-save on content changes
+        easyMDE.codemirror.on('change', scheduleAutosave);
+        document.getElementById('title').addEventListener('input', scheduleAutosave);
+        document.getElementById('slug').addEventListener('input', scheduleAutosave);
+        document.getElementById('excerpt').addEventListener('input', scheduleAutosave);
+        
+        // Save before leaving page if there are unsaved changes
+        window.addEventListener('beforeunload', function(e) {
+            if (autosaveTimer) {
+                // There are pending changes
+                autoSaveDraft();
+            }
+        });
         
         // Form submission validation
         document.getElementById('postForm').addEventListener('submit', function(e) {
