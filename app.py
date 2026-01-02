@@ -986,14 +986,18 @@ def sitemap():
     for lang in LANGUAGES:
         sitemap_urls.append({
             'url': f'https://{request.host}/{lang}',
-            'updated': datetime.now().isoformat()
+            'updated': datetime.now().isoformat(),
+            'changefreq': 'daily',
+            'priority': '1.0'
         })
     
     # Add post URLs
     for post in posts:
         sitemap_urls.append({
             'url': f'https://{request.host}/{dict(post)["language"]}/post/{dict(post)["slug"]}',
-            'updated': dict(post)['updated_at']
+            'updated': dict(post)['updated_at'],
+            'changefreq': 'monthly',
+            'priority': '0.9'
         })
     
     # Generate XML
@@ -1004,6 +1008,8 @@ def sitemap():
         xml += f'  <url>\n'
         xml += f'    <loc>{entry["url"]}</loc>\n'
         xml += f'    <lastmod>{entry["updated"][:10]}</lastmod>\n'
+        xml += f'    <changefreq>{entry["changefreq"]}</changefreq>\n'
+        xml += f'    <priority>{entry["priority"]}</priority>\n'
         xml += f'  </url>\n'
     
     xml += '</urlset>'
