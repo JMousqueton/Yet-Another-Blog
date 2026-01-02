@@ -222,6 +222,120 @@ def get_enabled_languages():
         enabled = {'en': LANGUAGES['en']}
     return enabled
 
+# Statistics Helper Functions
+def get_post_view_count(post_id):
+    """Get total view count for a post."""
+    db = get_db()
+    result = db.execute('SELECT COUNT(*) as count FROM post_views WHERE post_id = ?', (post_id,)).fetchone()
+    return result['count'] if result else 0
+
+def get_most_viewed_posts(limit=10, lang=None):
+    """Get most viewed posts with their view counts."""
+    db = get_db()
+    query = '''
+        SELECT p.id, p.title, p.slug, p.language, p.author, 
+               COUNT(pv.id) as views
+        FROM posts p
+        LEFT JOIN post_views pv ON p.id = pv.post_id
+        WHERE p.status = 'published'
+    '''
+    params = []
+    
+    if lang:
+        query += ' AND p.language = ?'
+        params.append(lang)
+    
+    query += ' GROUP BY p.id ORDER BY views DESC LIMIT ?'
+    params.append(limit)
+    
+    return db.execute(query, params).fetchall()
+
+def get_traffic_sources(days=30):
+    """Get traffic sources for the last N days."""
+    from collections import defaultdict
+    db = get_db()
+    
+    query = '''
+        SELECT referrer, COUNT(*) as count
+        FROM post_views
+        WHERE viewed_at >= datetime('now', '-' || ? || ' days')
+        GROUP BY referrer
+        ORDER BY count DESC
+    '''
+    
+    results = db.execute(query, (days,)).fetchall()
+    
+    # Categorize referrers
+    sources = defaultdict(int)
+    for row in results:
+        referrer = row['referrer'] or 'direct'
+        
+        if 'google' in referrer.lower():
+            sources['Google'] += row['count']
+        elif 'facebook' in referrer.lower():
+            sources['Facebook'] += row['count']
+        elif 'twitter' in referrer.lower() or 'x.com' in referrer.lower():
+            sources['Twitter/X'] += row['count']
+        elif 'linkedin' in referrer.lower():
+            sources['LinkedIn'] += row['count']
+        elif referrer == 'direct':
+            sources['Direct'] += row['count']
+        else:
+            sources['Other'] += row['count']
+    
+    return dict(sorted(sources.items(), key=lambda x: x[1], reverse=True))
+
+def get_reading_patterns(days=30):
+    """Get hourly distribution of views for the last N days."""
+    from collections import defaultdict
+    db = get_db()
+    
+    query = '''
+        SELECT strftime('%H', viewed_at) as hour, COUNT(*) as count
+        FROM post_views
+        WHERE viewed_at >= datetime('now', '-' || ? || ' days')
+        GROUP BY hour
+        ORDER BY hour
+    '''
+    
+    results = db.execute(query, (days,)).fetchall()
+    
+    # Create hourly data (0-23)
+    patterns = {str(i).zfill(2): 0 for i in range(24)}
+    for row in results:
+        if row['hour']:
+            patterns[row['hour']] = row['count']
+    
+    return patterns
+
+
+def get_dashboard_summary(lang=None):
+    """Get overall statistics summary."""
+    db = get_db()
+    
+    query = 'SELECT COUNT(*) as total FROM post_views'
+    if lang:
+        query += ' WHERE language = ?'
+        total_views = db.execute(query, (lang,)).fetchone()['total']
+    else:
+        total_views = db.execute(query).fetchone()['total']
+    
+    # Get today's views
+    today_query = '''
+        SELECT COUNT(*) as count FROM post_views
+        WHERE DATE(viewed_at) = DATE('now')
+    '''
+    if lang:
+        today_query += ' AND language = ?'
+        today_views = db.execute(today_query, (lang,)).fetchone()['count']
+    else:
+        today_views = db.execute(today_query).fetchone()['count']
+    
+    return {
+        'total_views': total_views,
+        'today_views': today_views
+    }
+
 def migrate_database():
     """Add missing columns to existing database."""
     try:
@@ -594,6 +708,18 @@ def post_detail(lang, slug):
     author_info = None
     if post.get('author'):
         author_info = db.execute('SELECT * FROM authors WHERE name = ?', (post['author'],)).fetchone()
+    
+    # Track view for statistics (without blocking the response)
+    try:
+        referrer = request.referrer or 'direct'
+        user_agent = request.headers.get('User-Agent', 'unknown')
+        db.execute('''
+            INSERT INTO post_views (post_id, post_slug, language, referrer, user_agent, viewed_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (post['id'], slug, lang, referrer, user_agent, datetime.now().isoformat()))
+        db.commit()
+    except Exception as e:
+        print(f"Error tracking view: {e}")
     
     return render_template('post.html', 
                          post=post, 
@@ -1524,6 +1650,73 @@ def admin_settings():
     
     return render_template('admin/settings.html', settings=settings, languages=LANGUAGES)
 
+
+@app.route('/admin/statistics')
+@login_required
+def admin_statistics():
+    """Statistics dashboard for blog analytics."""
+    db = get_db()
+    is_admin_user = bool(session.get('is_admin'))
+    
+    # Get summary
+    summary = get_dashboard_summary()
+    
+    # Get most viewed posts
+    most_viewed = get_most_viewed_posts(limit=10)
+    most_viewed_list = []
+    for post in most_viewed:
+        most_viewed_list.append({
+            'title': post['title'],
+            'slug': post['slug'],
+            'language': post['language'],
+            'author': post['author'],
+            'views': post['views']
+        })
+    
+    # Get traffic sources
+    traffic_sources = get_traffic_sources(days=30)
+    
+    # Get reading patterns (hourly)
+    reading_patterns = get_reading_patterns(days=7)
+    
+    return render_template('admin/statistics.html',
+                         summary=summary,
+                         most_viewed=most_viewed_list,
+                         traffic_sources=traffic_sources,
+                         reading_patterns=reading_patterns,
+                         languages=LANGUAGES)
+
+@app.route('/admin/api/post-stats/<int:post_id>')
+@login_required
+def api_post_stats(post_id):
+    """Get detailed stats for a specific post."""
+    db = get_db()
+    
+    # Get post details
+    post = db.execute('SELECT id, title, slug FROM posts WHERE id = ?', (post_id,)).fetchone()
+    if not post:
+        return {'error': 'Post not found'}, 404
+    
+    views = get_post_view_count(post_id)
+    
+    # Get last 7 days view trend
+    view_trend = db.execute('''
+        SELECT DATE(viewed_at) as date, COUNT(*) as count
+        FROM post_views
+        WHERE post_id = ?
+        AND viewed_at >= datetime('now', '-7 days')
+        GROUP BY DATE(viewed_at)
+        ORDER BY date
+    ''', (post_id,)).fetchall()
+    
+    trend_data = [{'date': row['date'], 'views': row['count']} for row in view_trend]
+    
+    return {
+        'post_id': post['id'],
+        'title': post['title'],
+        'total_views': views,
+        'trend': trend_data
+    }
 
 @app.route('/admin/about')
 @login_required

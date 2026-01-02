@@ -1,0 +1,364 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'statistics' %}
+
+{% block title %}Statistics & Analytics{% endblock %}
+{% block page_header %}<i class="fas fa-chart-line"></i> Statistics & Analytics{% endblock %}
+
+{% block extra_head %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card.views {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .stat-card.today {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .stat-card.time {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 2rem;
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    
+    .table-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .table-card h3 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    
+    .table-card table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .table-card thead th {
+        background: #f8f9fa;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #2c3e50;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table-card tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .table-card tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 0.35rem 0.65rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .badge-primary {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+    }
+    
+    .badge-success {
+        background: rgba(52, 211, 153, 0.1);
+        color: #34d399;
+    }
+    
+    .badge-info {
+        background: rgba(79, 172, 254, 0.1);
+        color: #4facfe;
+    }
+    
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.8;
+        margin-bottom: 0.5rem;
+    }
+    
+    .no-data {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+    
+    .no-data i {
+        font-size: 3rem;
+        opacity: 0.5;
+        margin-bottom: 1rem;
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stat-card views">
+                <div class="stat-icon">
+                    <i class="fas fa-eye"></i>
+                </div>
+                <div class="stat-label">Total Views</div>
+                <div class="stat-value">{{ summary.total_views }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card today">
+                <div class="stat-icon">
+                    <i class="fas fa-sun"></i>
+                </div>
+                <div class="stat-label">Today's Views</div>
+                <div class="stat-value">{{ summary.today_views }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="chart-container">
+                <h3 class="mb-3">Reading Patterns (Last 7 Days)</h3>
+                <canvas id="readingPatternsChart"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="chart-container">
+                <h3 class="mb-3">Traffic Sources (Last 30 Days)</h3>
+                <canvas id="trafficSourcesChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Most Viewed Posts -->
+    <div class="table-card">
+        <h3><i class="fas fa-ranking-star text-warning"></i> Most Viewed Posts</h3>
+        {% if most_viewed %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Post Title</th>
+                    <th>Author</th>
+                    <th class="text-center">Views</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in most_viewed %}
+                <tr>
+                    <td>
+                        <span class="badge badge-primary">{{ loop.index }}</span>
+                    </td>
+                    <td>
+                        <strong>{{ post.title }}</strong>
+                        <br>
+                        <small class="text-muted">
+                            <i class="fas fa-globe"></i> {{ post.language.upper() }}
+                        </small>
+                    </td>
+                    <td>{{ post.author or 'Unknown' }}</td>
+                    <td class="text-center">
+                        <span class="badge badge-success">{{ post.views }}</span>
+                    </td>
+                    <td>
+                        <a href="/{{ post.language }}/post/{{ post.slug }}" 
+                           target="_blank"
+                           class="btn btn-sm btn-outline-primary"
+                           title="View post">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">
+            <i class="fas fa-chart-bar"></i>
+            <p>No view data yet. Posts will appear here once they receive views.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Traffic Sources -->
+    <div class="table-card">
+        <h3><i class="fas fa-traffic-light"></i> Traffic Sources (Last 30 Days)</h3>
+        {% if traffic_sources %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th class="text-right">Views</th>
+                    <th class="text-right">Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set total_traffic = traffic_sources.values()|sum %}
+                {% for source, count in traffic_sources.items() %}
+                <tr>
+                    <td>
+                        {% if source == 'Google' %}
+                            <i class="fab fa-google text-danger"></i> Google
+                        {% elif source == 'Facebook' %}
+                            <i class="fab fa-facebook text-primary"></i> Facebook
+                        {% elif source == 'Twitter/X' %}
+                            <i class="fab fa-x-twitter"></i> Twitter/X
+                        {% elif source == 'LinkedIn' %}
+                            <i class="fab fa-linkedin text-info"></i> LinkedIn
+                        {% elif source == 'Direct' %}
+                            <i class="fas fa-link"></i> Direct
+                        {% else %}
+                            <i class="fas fa-globe"></i> {{ source }}
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        <strong>{{ count }}</strong>
+                    </td>
+                    <td class="text-right">
+                        <span class="badge badge-secondary">
+                            {{ ((count / total_traffic) * 100)|int }}%
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">
+            <i class="fas fa-chart-pie"></i>
+            <p>No traffic data available yet. Referrer information will appear as posts are visited.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Reading Patterns Chart
+    const readingPatternsData = {{ reading_patterns|tojson }};
+    const readingHours = Object.keys(readingPatternsData).sort();
+    const readingCounts = readingHours.map(h => readingPatternsData[h]);
+    
+    new Chart(document.getElementById('readingPatternsChart'), {
+        type: 'line',
+        data: {
+            labels: readingHours.map(h => h + ':00'),
+            datasets: [{
+                label: 'Views by Hour',
+                data: readingCounts,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#667eea',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        font: { size: 12 }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#eee' }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+    
+    // Traffic Sources Chart
+    const trafficSourcesData = {{ traffic_sources|tojson }};
+    const sources = Object.keys(trafficSourcesData);
+    const counts = Object.values(trafficSourcesData);
+    
+    const colors = ['#667eea', '#f093fb', '#f5576c', '#4facfe', '#34d399'];
+    
+    new Chart(document.getElementById('trafficSourcesChart'), {
+        type: 'doughnut',
+        data: {
+            labels: sources,
+            datasets: [{
+                data: counts,
+                backgroundColor: colors.slice(0, sources.length),
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: { size: 12 },
+                        padding: 15
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

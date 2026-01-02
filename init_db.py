@@ -54,6 +54,31 @@ def init_database():
         ON posts(language, status, publish_date)
     ''')
     
+    # Create post_views table for statistics tracking
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS post_views (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER NOT NULL,
+            viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            referrer TEXT,
+            user_agent TEXT,
+            language TEXT,
+            post_slug TEXT,
+            FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Create index for post views queries
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_post_views_post_id 
+        ON post_views(post_id, viewed_at)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_post_views_slug 
+        ON post_views(post_slug, language)
+    ''')
+    
     # Create settings table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS settings (

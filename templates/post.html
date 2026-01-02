@@ -383,45 +383,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (hasVoted()) {
         disableButtons();
     }
-    
-    // Track time spent on post
-    let timeSpentInterval;
-    let timeSpentSeconds = 0;
-    
-    function startTimeTracking() {
-        timeSpentInterval = setInterval(() => {
-            timeSpentSeconds++;
-            // Send data to server every 30 seconds or on page unload
-            if (timeSpentSeconds % 30 === 0) {
-                recordTimeSpent();
-            }
-        }, 1000);
-    }
-    
-    function recordTimeSpent() {
-        const data = {
-            post_slug: '{{ post.slug }}',
-            language: '{{ lang }}',
-            time_spent: timeSpentSeconds
-        };
-        
-        navigator.sendBeacon('/admin/api/time-spent', 
-            JSON.stringify(data)
-        );
-    }
-    
-    // Start tracking when page loads
-    startTimeTracking();
-    
-    // Record time spent when page unloads
-    window.addEventListener('beforeunload', function() {
-        if (timeSpentSeconds > 0) {
-            recordTimeSpent();
-        }
-        if (timeSpentInterval) {
-            clearInterval(timeSpentInterval);
-        }
-    });
 });
 </script>
 {% endblock %}
