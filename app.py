@@ -845,7 +845,7 @@ def post_detail_amp(lang, slug):
 @app.route('/rss')
 def rss_feed_default():
     """Redirect /rss to /en/rss (default language)."""
-    return redirect(url_for('rss_feed', lang=DEFAULT_LANGUAGE))
+    return redirect('/en/rss', code=301)
 
 @app.route('/<lang>/rss')
 def rss_feed(lang):
