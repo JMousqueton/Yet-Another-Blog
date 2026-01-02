@@ -526,8 +526,8 @@ def update_scheduled_posts():
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        now = datetime.now().isoformat()
-        print(f"⏰ Scheduler check at {now}")
+        now = datetime.utcnow().isoformat()
+        print(f"⏰ Scheduler check (UTC) at {now}")
         
         # Fetch scheduled posts that need to be published
         # Use datetime() for proper comparison regardless of format variations
@@ -535,8 +535,8 @@ def update_scheduled_posts():
             SELECT p.id, p.title, p.slug, p.language, p.author, a.email, a.name as author_name
             FROM posts p
             LEFT JOIN authors a ON p.author = a.name
-            WHERE p.status = 'scheduled' AND datetime(p.publish_date) <= datetime(?)
-        ''', (now,))
+            WHERE p.status = 'scheduled' AND datetime(p.publish_date) <= datetime('now')
+        ''')
         
         posts_to_publish = cursor.fetchall()
         print(f"📋 Found {len(posts_to_publish)} post(s) ready to publish")
@@ -545,8 +545,8 @@ def update_scheduled_posts():
         cursor.execute('''
             UPDATE posts 
             SET status = 'published', updated_at = ? 
-            WHERE status = 'scheduled' AND datetime(publish_date) <= datetime(?)
-        ''', (now, now))
+            WHERE status = 'scheduled' AND datetime(publish_date) <= datetime('now')
+        ''', (now,))
         
         updated = cursor.rowcount
         conn.commit()
