@@ -53,6 +53,7 @@ def add_security_headers(response):
         "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
         "img-src 'self' data: https:; "
         "connect-src 'self' https://cdn.jsdelivr.net https://platform.twitter.com https://stats.mousqueton.io; "
+        "frame-src https://platform.twitter.com; "
         "frame-ancestors 'none';"
     )
     # Prevent MIME sniffing
