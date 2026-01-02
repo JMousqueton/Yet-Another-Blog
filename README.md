@@ -12,6 +12,8 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 
 ### 📝 Content Management
 - **Full Admin Panel**: Complete WYSIWYG editor with markdown support
+- **Code Syntax Highlighting**: Beautiful syntax highlighting for code blocks
+- **Media Embeds**: YouTube and Twitter/X embed support
 - **Post Management**: Draft, Published, and Scheduled statuses
 - **Featured Posts**: Pin important articles to the top of the homepage
 - **Author Profiles**: Bio, social links, and profile images
@@ -19,6 +21,7 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 - **Featured Images**: Support for post and author images
 - **Reading Time**: Automatic calculation
 - **Search**: Full-text search across posts
+- **Auto-save**: Draft auto-save to prevent data loss
 
 ### 🎨 Design & UX
 - **4 Themes**: Default, Light, Dark, and Vibrant
@@ -213,6 +216,61 @@ Themes are CSS files in `static/css/`:
 - `vibrant.css` - Colorful gradient theme
 
 Change themes in Admin → Settings or by editing the `template_css` setting.
+
+## ✍️ Writing Posts
+
+### Markdown Syntax
+Posts are written in Markdown with enhanced features:
+
+#### Code Blocks with Syntax Highlighting
+Use triple backticks with language identifier:
+
+\`\`\`python
+def hello_world():
+    print("Hello, World!")
+    return True
+\`\`\`
+
+\`\`\`javascript
+const greeting = () => {
+    console.log("Hello, World!");
+};
+\`\`\`
+
+Supported languages: Python, JavaScript, Java, C++, HTML, CSS, and many more.
+
+#### Inline Code
+Use single backticks for inline code: \`print("hello")\`
+
+#### YouTube Embeds
+Embed YouTube videos in three ways:
+
+1. **Short syntax**: \`[youtube:VIDEO_ID]\`
+   - Example: \`[youtube:dQw4w9WgXcQ]\`
+
+2. **Full URL**: Just paste the YouTube URL
+   - Example: \`https://www.youtube.com/watch?v=dQw4w9WgXcQ\`
+   - Example: \`https://youtu.be/dQw4w9WgXcQ\`
+
+#### Twitter/X Embeds
+Embed tweets in three ways:
+
+1. **Short syntax**: \`[twitter:TWEET_ID]\` or \`[x:TWEET_ID]\`
+   - Example: \`[twitter:1234567890]\`
+
+2. **Full URL**: Just paste the tweet URL
+   - Example: \`https://twitter.com/username/status/1234567890\`
+   - Example: \`https://x.com/username/status/1234567890\`
+
+### Standard Markdown Features
+- **Bold**: \`**text**\` or \`__text__\`
+- **Italic**: \`*text*\` or \`_text_\`
+- **Headers**: \`# H1\`, \`## H2\`, \`### H3\`, etc.
+- **Links**: \`[text](url)\`
+- **Images**: \`![alt](url)\`
+- **Lists**: Use \`-\` or \`*\` for unordered, \`1.\` for ordered
+- **Blockquotes**: Start line with \`>\`
+- **Tables**: Use pipe \`|\` syntax
 
 ## 🌍 Adding New Languages
 

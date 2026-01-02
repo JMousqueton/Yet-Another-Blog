@@ -17,6 +17,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask_wtf.csrf import CSRFProtect
+import re
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -68,10 +69,50 @@ def add_security_headers(response):
 # Markdown filter for Jinja2 templates
 @app.template_filter('markdown')
 def markdown_filter(text):
-    """Convert markdown text to HTML."""
+    """Convert markdown text to HTML with embed support."""
     if not text:
         return ''
-    return markdown.markdown(text, extensions=['extra', 'codehilite', 'nl2br', 'sane_lists'])
+    
+    # Process YouTube embeds: [youtube:VIDEO_ID] or full YouTube URLs
+    text = re.sub(
+        r'\[youtube:([\w-]+)\]',
+        r'<div class="embed-responsive embed-responsive-16by9 my-4"><iframe class="embed-responsive-item" src="https://www.youtube.com/embed/\1" allowfullscreen loading="lazy"></iframe></div>',
+        text
+    )
+    text = re.sub(
+        r'https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([\w-]+)',
+        r'<div class="embed-responsive embed-responsive-16by9 my-4"><iframe class="embed-responsive-item" src="https://www.youtube.com/embed/\1" allowfullscreen loading="lazy"></iframe></div>',
+        text
+    )
+    
+    # Process Twitter/X embeds: [twitter:TWEET_ID] or [x:TWEET_ID]
+    text = re.sub(
+        r'\[(?:twitter|x):([\w]+)\]',
+        r'<blockquote class="twitter-tweet" data-theme="light"><a href="https://twitter.com/x/status/\1"></a></blockquote>',
+        text
+    )
+    # Twitter URLs
+    text = re.sub(
+        r'https?://(?:twitter\.com|x\.com)/\w+/status/(\d+)',
+        r'<blockquote class="twitter-tweet" data-theme="light"><a href="https://twitter.com/x/status/\1"></a></blockquote>',
+        text
+    )
+    
+    # Convert markdown to HTML with syntax highlighting
+    html = markdown.markdown(text, extensions=[
+        'extra',
+        'codehilite',
+        'nl2br',
+        'sane_lists',
+        'fenced_code'
+    ], extension_configs={
+        'codehilite': {
+            'css_class': 'highlight',
+            'linenums': False
+        }
+    })
+    
+    return html
 
 # Supported languages
 LANGUAGES = {
