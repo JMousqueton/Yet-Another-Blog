@@ -112,6 +112,13 @@ def markdown_filter(text):
         }
     })
     
+    # Add target="_blank" and rel="noopener noreferrer" to all links
+    html = re.sub(
+        r'<a href=',
+        r'<a target="_blank" rel="noopener noreferrer" href=',
+        html
+    )
+    
     return html
 
 # Supported languages
@@ -750,6 +757,22 @@ def post_detail(lang, slug):
     if post.get('author'):
         author_info = db.execute('SELECT * FROM authors WHERE name = ?', (post['author'],)).fetchone()
     
+    # Get previous post (older)
+    prev_post = db.execute('''
+        SELECT id, title, slug FROM posts
+        WHERE language = ? AND status = 'published' AND publish_date <= ? AND publish_date < ?
+        ORDER BY publish_date DESC
+        LIMIT 1
+    ''', (lang, now, post['publish_date'])).fetchone()
+    
+    # Get next post (newer)
+    next_post = db.execute('''
+        SELECT id, title, slug FROM posts
+        WHERE language = ? AND status = 'published' AND publish_date <= ? AND publish_date > ?
+        ORDER BY publish_date ASC
+        LIMIT 1
+    ''', (lang, now, post['publish_date'])).fetchone()
+    
     # Track view for statistics (without blocking the response)
     try:
         referrer = request.referrer or 'direct'
@@ -765,6 +788,8 @@ def post_detail(lang, slug):
     return render_template('post.html', 
                          post=post, 
                          author=author_info,
+                         prev_post=prev_post,
+                         next_post=next_post,
                          lang=lang, 
                          languages=get_enabled_languages(), 
                          meta_description=page_meta_description,
@@ -1186,12 +1211,8 @@ def admin_new_post():
         ''', (slug, language)).fetchone()
         
         if existing:
-            flash(f'A post with slug "{slug}" already exists in {language.upper()}', 'error')
-            return render_template('admin/new_post.html', 
-                                 languages=LANGUAGES,
-                                 authors=authors_list,
-                                 current_user=session.get('user_name'),
-                                 form_data=request.form)
+            # Post already exists - redirect to edit page instead
+            return redirect(url_for('admin_edit_post', post_id=existing['id']))
         
         # Insert post
         try:
@@ -1415,12 +1436,16 @@ def admin_media():
                     filepath = os.path.join(uploads_dir, filename)
                     file_size = os.path.getsize(filepath)
                     file_size_kb = round(file_size / 1024, 2)
+                    # Get file modification time
+                    file_mtime = os.path.getmtime(filepath)
+                    file_date = datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d %H:%M:%S')
                     media_files.append({
                         'filename': filename,
                         'url': url_for('static', filename=f'uploads/{filename}'),
-                        'size': file_size_kb
+                        'size': file_size_kb,
+                        'date': file_date
                     })
-            # Sort by filename (newest first)
+            # Sort by date (newest first)
             media_files.sort(key=lambda x: x['filename'], reverse=True)
     except Exception as e:
         flash(f'Error reading media files: {str(e)}', 'error')

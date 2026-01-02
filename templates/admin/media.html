@@ -74,6 +74,12 @@
             margin-bottom: 1rem;
         }
         
+        .media-item-date {
+            font-size: 0.75rem;
+            color: #999;
+            margin-bottom: 1rem;
+        }
+        
         .media-item-actions {
             display: flex;
             gap: 0.5rem;
@@ -126,6 +132,7 @@
                 <div class="media-item-info">
                     <div class="media-item-filename" title="{{ media.filename }}">{{ media.filename }}</div>
                     <div class="media-item-size">{{ media.size }} KB</div>
+                    <div class="media-item-date"><i class="fas fa-calendar"></i> {{ media.date }}</div>
                     <div class="media-item-actions">
                         <button type="button" 
                                 class="btn btn-sm btn-outline-primary" 
