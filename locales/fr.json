@@ -33,7 +33,9 @@
   },
   "index": {
     "welcome": "Bienvenue sur mon blog",
-    "no_posts": "Aucun article disponible pour le moment. Revenez bientôt !"
+    "no_posts": "Aucun article disponible pour le moment. Revenez bientôt !",
+    "featured_posts": "Articles en vedette",
+    "featured": "En vedette"
   },
   "pagination": {
     "previous": "Précédent",

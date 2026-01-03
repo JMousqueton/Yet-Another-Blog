@@ -33,7 +33,9 @@
   },
   "index": {
     "welcome": "Willkommen auf meinem Blog",
-    "no_posts": "Noch keine Beiträge verfügbar. Schauen Sie bald wieder vorbei!"
+    "no_posts": "Noch keine Beiträge verfügbar. Schauen Sie bald wieder vorbei!",
+    "featured_posts": "Hervorgehobene Beiträge",
+    "featured": "Hervorgehoben"
   },
   "pagination": {
     "previous": "Vorherige",

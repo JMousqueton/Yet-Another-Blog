@@ -74,7 +74,7 @@
         {% if featured_posts and not search_query %}
         <div class="featured-posts mb-5">
             <h2 class="h3 mb-4">
-                <i class="fas fa-star text-warning"></i> Featured Posts
+                <i class="fas fa-star text-warning"></i> {{ t.index.featured_posts }}
             </h2>
             <div class="row g-4">
                 {% for post in featured_posts %}
@@ -87,12 +87,12 @@
                                  alt="{{ post.title }}"
                                  style="height: 200px; object-fit: cover;">
                             <span class="badge bg-warning position-absolute top-0 end-0 m-2">
-                                <i class="fas fa-star"></i> Featured
+                                <i class="fas fa-star"></i> {{ t.index.featured }}
                             </span>
                         </div>
                         {% else %}
                         <div class="card-header bg-warning text-dark">
-                            <i class="fas fa-star"></i> Featured
+                            <i class="fas fa-star"></i> {{ t.index.featured }}
                         </div>
                         {% endif %}
                         <div class="card-body">

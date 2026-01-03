@@ -33,7 +33,9 @@
   },
   "index": {
     "welcome": "Welcome to My Blog",
-    "no_posts": "No posts available yet. Check back soon!"
+    "no_posts": "No posts available yet. Check back soon!",
+    "featured_posts": "Featured Posts",
+    "featured": "Featured"
   },
   "pagination": {
     "previous": "Previous",
