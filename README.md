@@ -32,18 +32,33 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 - **Custom Favicon**: Upload your own
 
 ### 🚀 Performance & SEO
-- **RSS Feeds**: Per-language RSS generation
-- **SEO Optimized**: Meta tags, Open Graph, Twitter Cards
+- **RSS Feeds**: Per-language RSS with featured images, author tags, and lastBuildDate
+- **SEO Optimized**: Meta tags, Open Graph, Twitter Cards, canonical URLs
+- **JSON-LD Schemas**: BlogPosting, Blog, and Person structured data for rich snippets
 - **AMP Support**: Accelerated Mobile Pages for lightning-fast mobile experience
-- **Sitemap**: Automatic XML sitemap generation
+- **Sitemap**: Automatic XML sitemap generation with language alternates
 - **Robots.txt**: Search engine configuration
 - **Page Transitions**: Smooth fade-in/out effects
-- **Auto-Publishing**: Scheduled posts publish automatically
+- **Auto-Publishing**: Scheduled posts publish automatically via APScheduler
+- **Lazy Loading**: Optimized image loading with shimmer effect
 
 ### 💬 Engagement
 - **Social Sharing**: LinkedIn, Twitter/X, Bluesky integration
 - **Reactions**: Helpful/Not Helpful with localStorage persistence
 - **Author Pages**: Dedicated pages for each author
+- **Post Navigation**: Previous/Next links on post pages
+- **Analytics**: Post view tracking and statistics dashboard
+
+### 📊 Analytics & Statistics
+- **Traffic Sources**: Track referrers (Google, Yahoo, Facebook, Twitter/X, LinkedIn, Bluesky, Direct, Other)
+- **Reading Patterns**: Hourly view distribution charts
+- **Rate Limiting**: Flask-Limiter with real IP detection via ProxyFix
+- **Docker Support**: Multi-stage Dockerfile with docker-compose setup
+- **Production Guides**: Ubuntu deployment with Nginx and systemd
+- **Most Viewed Posts**: Top 10 posts by view count
+- **Post Stats API**: Detailed analytics per post with 7-day trends
+- **Expandable Details**: Click "Other" traffic sources to see top 10 individual referrers
+- **Auto-Cleanup**: Automatically purges view data older than 30 days
 
 ### 🛠️ Developer Features
 - **Database Tools**: Export/import scripts for backups
@@ -139,52 +154,6 @@ blog/
     ├── author.html      # Author profile
     └── admin/          # Admin templates
 ```
-
-## 🌐 URL Structure
-
-### Public Routes
-- `/` - Redirects to default language
-- `/{lang}` - Homepage (en/fr/de)
-- `/{lang}/post/{slug}` - Individual post
-- `/{lang}/author/{name}` - Author profile
-- `/{lang}/rss` - RSS feed
-- `/sitemap.xml` - SEO sitemap
-- `/robots.txt` - Search engine rules
-
-### Admin Routes
-- `/admin/login` - Admin login
-- `/admin/dashboard` - Overview (shows full blog stats for all)
-- `/admin/posts` - Post management (authors see only their posts; admins see all)
-- `/admin/authors` - Author management (admins only)
-- `/admin/media` - Media library (admins only)
-- `/admin/settings` - Global settings (admins only)
-- `/admin/about` - About page
-- `/admin/authors/edit/{id}` - My Profile (every logged-in user can edit their profile)
-
-### Admin vs Author Capabilities
-- **Admins:** Full access to dashboard, all posts, authors, media, settings, about, and profile
-- **Authors:** Access to dashboard (global stats), their own posts (create/edit/delete), About page, and their profile page
-
-## 🗄️ Database Schema
-
-### Tables
-- **posts**: Blog posts with multilingual support
-- **authors**: Author profiles with social links
-- **settings**: Global configuration (key-value store)
-
-### Key Fields (posts)
-- `title`, `slug`, `content`
-- `language` (en/fr/de)
-- `status` (draft/published/scheduled)
-- `publish_date`, `author`
-- `featured_image`, `excerpt`
-- `reading_time` (auto-calculated)
-
-### Key Fields (authors)
-- `name`, `bio_en`, `bio_fr`, `bio_de`
-- `email`, `website`
-- `twitter`, `linkedin`, `github`
-- `profile_image`
 
 ## 🛠️ Database Management
 
@@ -295,40 +264,25 @@ LANGUAGES = {
 ## ⚙️ Configuration
 
 ### Environment Variables (.env)
-```bash
+```bash  # Minutes between auto-publish checks
+HOST=0.0.0.0
+PORT=5001
+DEBUG=False
+BASE_URL=https://yourdomain.com  # For email notifications
+
+# SMTP Configuration (optional)
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_LOGIN=
+SMTP_PASSWORD=
+SMTP_FROM=noreply@yourdomain.com
+
+# Rate Limiting
+RATELIMIT_STORAGE_URL=memory://
 SECRET_KEY=your-secret-key-here
 APP_ID=my-blog
 APP_NAME=My Awesome Blog
 DEFAULT_LANGUAGE=en
-DATABASE_PATH=blog.db
-SCHEDULER_INTERVAL=5
-```
-
-### Admin Settings (via UI)
-- Blog titles (per language)
-- Blog subtitles (per language)
-- Meta descriptions (per language)
-- Theme selection
-- Favicon upload
-- Language toggles
-
-## 🔒 Security
-
-- Password hashing with werkzeug
-- Session-based authentication
-- CSRF protection (recommended: add Flask-WTF)
-- File upload validation
-- SQL injection prevention (parameterized queries)
-
-## 📦 Dependencies
-
-Key packages:
-- **Flask** - Web framework
-- **Markdown** - Content rendering
-- **feedgen** - RSS generation
-- **APScheduler** - Scheduled publishing
-- **Pillow** - Image processing
-- **python-dotenv** - Environment config
 
 See `requirements.txt` for complete list.
 

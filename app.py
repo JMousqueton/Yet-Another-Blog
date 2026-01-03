@@ -606,6 +606,26 @@ def update_scheduled_posts():
         import traceback
         traceback.print_exc()
 
+def purge_old_views():
+    """Background task to delete post_views older than 30 days."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            DELETE FROM post_views
+            WHERE viewed_at < datetime('now', '-30 days')
+        ''')
+        
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        if deleted_count > 0:
+            print(f"🧹 Purged {deleted_count} post_views entries older than 30 days")
+    except Exception as e:
+        print(f"❌ Error purging old views: {e}")
+
 # Run database migrations on app startup
 try:
     migrate_database()
@@ -1877,6 +1897,33 @@ def api_export_database():
             # Get column names
             columns_info = db.execute(f"PRAGMA table_info({table_name})").fetchall()
             columns = [col['name'] for col in columns_info]
+
+@app.route('/admin/api/purge-old-views', methods=['POST'])
+@login_required
+@admin_required
+@limiter.limit('10 per day')
+def api_purge_old_views():
+    """Manually trigger purge of post_views older than 30 days."""
+    try:
+        db = get_db()
+        result = db.execute('''
+            DELETE FROM post_views
+            WHERE viewed_at < datetime('now', '-30 days')
+        ''')
+        deleted_count = result.rowcount
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'deleted': deleted_count,
+            'message': f'Purged {deleted_count} entries older than 30 days'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
             
             # Get all rows
             rows = db.execute(f"SELECT * FROM {table_name}").fetchall()
@@ -2150,6 +2197,7 @@ def admin_about():
 # Initialize scheduler for auto-publishing scheduled posts
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=update_scheduled_posts, trigger="interval", minutes=SCHEDULER_INTERVAL)
+scheduler.add_job(func=purge_old_views, trigger="interval", hours=24)  # Run daily
 scheduler.start()
 
 if __name__ == '__main__':
