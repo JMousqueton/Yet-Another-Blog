@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} - Preview{% endblock %}
+
+{% block meta_tags %}
+    <!-- Prevent indexing of preview pages -->
+    <meta name="robots" content="noindex, nofollow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ post.title }}">
+    <meta property="og:description" content="{{ post.excerpt or (post.content|striptags|truncate(160)) }}">
+    {% if meta_image %}<meta property="og:image" content="{{ meta_image }}">{% endif %}
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ post.title }}">
+    <meta name="twitter:description" content="{{ post.excerpt or (post.content|striptags|truncate(160)) }}">
+    {% if meta_image %}<meta name="twitter:image" content="{{ meta_image }}">{% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Preview Banner -->
+<div class="preview-banner" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 1rem; text-align: center; position: fixed; top: 0; left: 0; right: 0; z-index: 1050; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div>
+            <i class="fas fa-eye"></i> <strong>PREVIEW MODE</strong> - This is an unpublished {{ post.status }} post
+            {% if post.status == 'scheduled' and post.publish_date %}
+            | Scheduled for {{ post.publish_date[:16] }}
+            {% endif %}
+        </div>
+        <button type="button" class="btn btn-light btn-sm" onclick="publishNow({{ post.id }})">
+            <i class="fas fa-check-circle"></i> Publish Now
+        </button>
+    </div>
+</div>
+
+<div style="padding-top: 60px;"></div>
+
+<!-- Post Content (same as post.html) -->
+<div class="container post-container">
+    <article class="post-detail">
+        <!-- Post Header -->
+        <header class="post-header">
+            <div class="post-meta-top mb-3">
+                <span class="badge bg-{{ post.language }}">{{ post.language.upper() }}</span>
+                {% if post.status == 'draft' %}
+                <span class="badge bg-warning text-dark">DRAFT</span>
+                {% elif post.status == 'scheduled' %}
+                <span class="badge bg-info">SCHEDULED</span>
+                {% endif %}
+            </div>
+            
+            <h1 class="post-title">{{ post.title }}</h1>
+            
+            {% if post.excerpt %}
+            <p class="post-excerpt">{{ post.excerpt }}</p>
+            {% endif %}
+            
+            <div class="post-meta">
+                {% if author %}
+                <div class="author-info">
+                    {% if author.profile_image %}
+                    <img src="{{ url_for('static', filename='authors/' + author.profile_image) }}" 
+                         alt="{{ author.name }}"
+                         class="author-avatar"
+                         loading="lazy">
+                    {% else %}
+                    <div class="author-avatar-placeholder">{{ author.name[0].upper() }}</div>
+                    {% endif %}
+                    <div>
+                        <strong>{{ author.name }}</strong>
+                        <small class="d-block text-muted">
+                            <i class="far fa-calendar"></i> {{ post.created_at[:10] }}
+                            <i class="far fa-clock ms-2"></i> {{ post.reading_time }} min read
+                        </small>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+        
+        <!-- Featured Image -->
+        {% if post.featured_image %}
+        <div class="featured-image mb-4">
+            <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" 
+                 alt="{{ post.title }}" 
+                 class="img-fluid rounded"
+                 loading="eager">
+        </div>
+        {% endif %}
+        
+        <!-- Post Content -->
+        <div class="post-content">
+            {{ post.content|markdown|safe }}
+        </div>
+        
+        <!-- Author Bio -->
+        {% if author %}
+        <div class="author-bio mt-5 p-4 bg-light rounded">
+            <div class="row align-items-center">
+                {% if author.profile_image %}
+                <div class="col-md-2 text-center">
+                    <img src="{{ url_for('static', filename='authors/' + author.profile_image) }}" 
+                         alt="{{ author.name }}"
+                         class="rounded-circle"
+                         style="width: 80px; height: 80px; object-fit: cover;"
+                         loading="lazy">
+                </div>
+                {% endif %}
+                <div class="{% if author.profile_image %}col-md-10{% else %}col-12{% endif %}">
+                    <h5 class="mb-2">About {{ author.name }}</h5>
+                    {% if author['bio_' + lang] %}
+                    <p class="mb-2">{{ author['bio_' + lang] }}</p>
+                    {% endif %}
+                    
+                    {% if author.twitter or author.linkedin or author.github or author.website %}
+                    <div class="author-social">
+                        {% if author.twitter %}
+                        <a href="{{ author.twitter }}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        {% endif %}
+                        {% if author.linkedin %}
+                        <a href="{{ author.linkedin }}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                            <i class="fab fa-linkedin"></i>
+                        </a>
+                        {% endif %}
+                        {% if author.github %}
+                        <a href="{{ author.github }}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        {% endif %}
+                        {% if author.website %}
+                        <a href="{{ author.website }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-globe"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </article>
+</div>
+
+<style>
+.post-container {
+    max-width: 800px;
+    margin: 2rem auto;
+}
+
+.post-header {
+    margin-bottom: 2rem;
+}
+
+.post-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 1rem 0;
+}
+
+.post-excerpt {
+    font-size: 1.25rem;
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+
+.author-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.author-avatar-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.post-content {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--text-color);
+}
+
+.post-content h1,
+.post-content h2,
+.post-content h3 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.post-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+}
+
+.post-content code {
+    background: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.post-content pre {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+</style>
+
+<script>
+function publishNow(postId) {
+    if (!confirm('Are you sure you want to publish this post now?')) {
+        return;
+    }
+    
+    const button = event.target.closest('button');
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing...';
+    
+    fetch(`/admin/posts/${postId}/publish-now`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Post published successfully!');
+            setTimeout(() => {
+                window.location.href = `/admin/posts`;
+            }, 1500);
+        } else {
+            alert(`Error: ${data.error || 'Failed to publish'}`);
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-check-circle"></i> Publish Now';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error publishing post');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-check-circle"></i> Publish Now';
+    });
+}
+</script>
+{% endblock %}

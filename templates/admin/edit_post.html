@@ -272,6 +272,35 @@
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="fas fa-save"></i> Save Changes
                             </button>
+                            
+                            {% if post.status in ['draft', 'scheduled'] %}
+                            <button type="button" class="btn btn-outline-info" onclick="generateShareLink()">
+                                <i class="fas fa-share-alt"></i> 
+                                <span id="shareLinkBtnText">Generate Preview Link</span>
+                            </button>
+                            <div id="shareLinkContainer" style="display: none;" class="mt-3 p-3 bg-light rounded">
+                                <label class="form-label small text-muted">Shareable Preview Link:</label>
+                                <div class="input-group">
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="shareLink" 
+                                           readonly
+                                           value="{{ request.url_root }}preview/{{ post.share_token }}"
+                                           {% if not post.share_token %}style="display: none;"{% endif %}>
+                                    <button class="btn btn-outline-secondary" 
+                                            type="button" 
+                                            onclick="copyShareLink()"
+                                            id="copyLinkBtn"
+                                            {% if not post.share_token %}style="display: none;"{% endif %}>
+                                        <i class="fas fa-copy"></i> Copy
+                                    </button>
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    <i class="fas fa-info-circle"></i> Share this link to let others preview the unpublished post
+                                </small>
+                            </div>
+                            {% endif %}
+                            
                             <a href="{{ url_for('admin_posts') }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-times"></i> Cancel
                             </a>
@@ -491,5 +520,74 @@
                 document.getElementById('imagePreview').style.display = 'none';
             }
         });
+        
+        // Generate share link
+        function generateShareLink() {
+            const postId = {{ post.id }};
+            const btn = document.getElementById('shareLinkBtnText');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            
+            // Get CSRF token from form
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+            
+            fetch(`/admin/posts/${postId}/generate-share-link`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('shareLink').value = data.preview_url;
+                    document.getElementById('shareLink').style.display = 'block';
+                    document.getElementById('copyLinkBtn').style.display = 'block';
+                    document.getElementById('shareLinkContainer').style.display = 'block';
+                    btn.innerHTML = '<i class="fas fa-check"></i> Link Generated';
+                    setTimeout(() => {
+                        btn.innerHTML = 'Regenerate Preview Link';
+                    }, 2000);
+                } else {
+                    alert('Error generating link: ' + (data.error || 'Unknown error'));
+                    btn.innerHTML = 'Generate Preview Link';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error generating link');
+                btn.innerHTML = 'Generate Preview Link';
+            });
+        }
+        
+        // Copy share link to clipboard
+        function copyShareLink() {
+            const linkInput = document.getElementById('shareLink');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999); // For mobile
+            
+            try {
+                document.execCommand('copy');
+                const btn = document.getElementById('copyLinkBtn');
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy link');
+            }
+        }
+        
+        // Show share link container if token already exists
+        {% if post.share_token %}
+        document.getElementById('shareLinkContainer').style.display = 'block';
+        document.getElementById('shareLinkBtnText').innerHTML = 'Regenerate Preview Link';
+        {% endif %}
     </script>
 {% endblock %}

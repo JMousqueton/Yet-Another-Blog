@@ -22,6 +22,7 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 - **Reading Time**: Automatic calculation
 - **Search**: Full-text search across posts
 - **Auto-save**: Draft auto-save to prevent data loss
+- **Draft Sharing**: Shareable preview links for unpublished posts (drafts & scheduled)
 
 ### 🎨 Design & UX
 - **4 Themes**: Default, Light, Dark, and Vibrant

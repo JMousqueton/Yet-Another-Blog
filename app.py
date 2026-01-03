@@ -460,6 +460,11 @@ def migrate_database():
             conn.commit()
             print("✓ Added featured_image column to posts table")
         
+        if 'share_token' not in posts_columns:
+            cursor.execute("ALTER TABLE posts ADD COLUMN share_token TEXT")
+            conn.commit()
+            print("✓ Added share_token column to posts table")
+        
         # Create settings table if it doesn't exist
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS settings (
@@ -659,10 +664,11 @@ except Exception as e:
 @app.before_request
 def before_request():
     """Handle language detection and routing with English fallback."""
-    # Skip for static files, SEO files, admin routes, and set-language route
+    # Skip for static files, SEO files, admin routes, set-language route, and preview links
     if (request.path.startswith('/static') or 
         request.path.startswith('/set-language') or
         request.path.startswith('/admin') or
+        request.path.startswith('/preview/') or
         request.path in ['/sitemap.xml', '/robots.txt', '/rss', '/rss/']):
         return
     
@@ -1468,6 +1474,99 @@ def admin_delete_post(post_id):
     flash(f'Post "{post["title"]}" deleted successfully!', 'success')
     
     return redirect(url_for('admin_posts'))
+
+@app.route('/admin/posts/<int:post_id>/generate-share-link', methods=['POST'])
+@login_required
+def admin_generate_share_link(post_id):
+    """Generate a shareable preview link for a draft post."""
+    db = get_db()
+    
+    post = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
+    if not post:
+        return jsonify({'success': False, 'error': 'Post not found'}), 404
+    
+    # Check permissions
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+    if not is_admin_user and post['author'] != current_author:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    
+    # Generate unique token
+    import secrets
+    share_token = secrets.token_urlsafe(32)
+    
+    # Update post with share token
+    db.execute('UPDATE posts SET share_token = ? WHERE id = ?', (share_token, post_id))
+    db.commit()
+    
+    # Return the preview URL - use absolute URL
+    preview_url = request.url_root.rstrip('/') + f'/preview/{share_token}'
+    return jsonify({'success': True, 'preview_url': preview_url})
+
+@app.route('/preview/<token>')
+def preview_post(token):
+    """Display a post preview using share token."""
+    if not token or len(token) < 10:
+        abort(404)
+    
+    db = get_db()
+    
+    post = db.execute('SELECT * FROM posts WHERE share_token = ?', (token,)).fetchone()
+    if not post:
+        abort(404)
+    
+    # Get author info
+    author = None
+    if post['author']:
+        author = db.execute('SELECT * FROM authors WHERE name = ?', (post['author'],)).fetchone()
+    
+    # Get settings
+    template_css = get_setting('template_css', 'default.css')
+    blog_title = get_setting(f'blog_title_{post["language"]}', get_setting('blog_title', 'My Blog'))
+    blog_subtitle = get_setting(f'blog_subtitle_{post["language"]}', get_setting('blog_subtitle_en', ''))
+    
+    # Get meta image
+    meta_image = None
+    if post['featured_image']:
+        meta_image = request.url_root + f"static/uploads/{post['featured_image']}"
+    
+    g.language = post['language']
+    
+    return render_template('post_preview.html',
+                         post=post,
+                         author=author,
+                         lang=post['language'],
+                         meta_description=post['excerpt'] or (post['content'][:160] if post['content'] else ''),
+                         meta_image=meta_image,
+                         blog_title=blog_title,
+                         blog_subtitle=blog_subtitle,
+                         template_css=template_css,
+                         languages=LANGUAGES,
+                         is_preview=True)
+
+@app.route('/admin/posts/<int:post_id>/publish-now', methods=['POST'])
+@login_required
+def admin_publish_now(post_id):
+    """Publish a draft post immediately."""
+    db = get_db()
+    
+    post = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
+    if not post:
+        return jsonify({'success': False, 'error': 'Post not found'}), 404
+    
+    # Check permissions
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+    if not is_admin_user and post['author'] != current_author:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    
+    # Update post status to published with current date/time
+    current_datetime = datetime.now().isoformat()
+    db.execute('UPDATE posts SET status = ?, publish_date = ? WHERE id = ?',
+               ('published', current_datetime, post_id))
+    db.commit()
+    
+    return jsonify({'success': True, 'message': 'Post published successfully'})
 
 @app.route('/admin/posts/new', methods=['GET', 'POST'])
 @login_required

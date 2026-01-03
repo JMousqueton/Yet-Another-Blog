@@ -143,9 +143,15 @@
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
+                                    {% if post.status == 'published' %}
                                     <a href="/{{ post.language }}/post/{{ post.slug }}" target="_blank" class="btn btn-sm btn-outline-primary action-btn" title="View">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-info action-btn" title="Preview Draft" onclick="getPreviewLink({{ post.id }}, '{{ post.share_token or '' }}')">
+                                        <i class="fas fa-share-alt"></i>
+                                    </button>
+                                    {% endif %}
                                     <a href="{{ url_for('admin_edit_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary action-btn" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
@@ -184,6 +190,100 @@
                 const form = document.getElementById('deleteForm');
                 form.action = `/admin/posts/delete/${postId}`;
                 form.submit();
+            }
+        }
+        
+        function getPreviewLink(postId, existingToken) {
+            if (existingToken) {
+                // Token already exists, show it immediately
+                showPreviewLinkModal(`${window.location.origin}/preview/${existingToken}`);
+            } else {
+                // Generate new token with CSRF token
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+                
+                fetch(`/admin/posts/${postId}/generate-share-link`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showPreviewLinkModal(data.preview_url);
+                    } else {
+                        alert('Error generating preview link: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error generating preview link');
+                });
+            }
+        }
+        
+        function showPreviewLinkModal(url) {
+            const modal = `
+                <div class="modal fade" id="previewLinkModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-share-alt"></i> Preview Link</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted">Share this link to let others preview the unpublished post:</p>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="previewUrlInput" value="${url}" readonly>
+                                    <button class="btn btn-primary" onclick="copyPreviewLink()">
+                                        <i class="fas fa-copy"></i> Copy
+                                    </button>
+                                </div>
+                                <div class="mt-3">
+                                    <a href="${url}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-external-link-alt"></i> Open Preview
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if present
+            const existingModal = document.getElementById('previewLinkModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to DOM
+            document.body.insertAdjacentHTML('beforeend', modal);
+            
+            // Show modal
+            const modalElement = new bootstrap.Modal(document.getElementById('previewLinkModal'));
+            modalElement.show();
+        }
+        
+        function copyPreviewLink() {
+            const input = document.getElementById('previewUrlInput');
+            input.select();
+            input.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                const btn = event.target.closest('button');
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-primary');
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy link');
             }
         }
     </script>
