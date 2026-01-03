@@ -914,9 +914,57 @@ def post_detail_amp(lang, slug):
 
 @app.route('/rss')
 def rss_feed_default():
-    """Redirect /rss to /en/rss (default language)."""
-    response = make_response('', 301)
-    response.headers['Location'] = '/en/rss'
+    """Generate RSS feed aggregating all enabled languages."""
+    enabled_languages = get_enabled_languages()
+    if not enabled_languages:
+        abort(404)
+    lang_codes = list(enabled_languages.keys())
+
+    db = get_db()
+    now = datetime.now().isoformat()
+    placeholders = ','.join(['?'] * len(lang_codes))
+
+    posts = db.execute(f'''
+        SELECT p.*, a.email as author_email FROM posts p
+        LEFT JOIN authors a ON p.author = a.name
+        WHERE p.language IN ({placeholders}) AND p.status = 'published' AND p.publish_date <= ?
+        ORDER BY p.publish_date DESC
+        LIMIT 50
+    ''', (*lang_codes, now)).fetchall()
+
+    fg = FeedGenerator()
+    blog_title = get_setting('blog_title_en') or get_setting('blog_title', 'My Blog') or 'My Blog'
+    fg.title(f'{blog_title} - All Languages')
+    fg.link(href=request.url_root, rel='alternate')
+    blog_subtitle = get_setting('blog_subtitle_en', get_setting('blog_subtitle', ''))
+    subtitle_plain = re.sub('<[^<]+?>', '', blog_subtitle) if blog_subtitle else ''
+    fg.description(subtitle_plain or 'Latest posts from all enabled languages')
+    fg.language('en')
+    fg.author({'name': blog_title})
+
+    if posts:
+        latest_dt = max(datetime.fromisoformat(p['publish_date']) for p in posts)
+        if latest_dt.tzinfo is None:
+            latest_dt = latest_dt.replace(tzinfo=pytz.UTC)
+        fg.lastBuildDate(latest_dt)
+    else:
+        fg.lastBuildDate(datetime.now(pytz.UTC))
+
+    for post in posts:
+        fe = fg.add_entry()
+        fe.title(post['title'])
+        fe.link(href=request.url_root + f"{post['language']}/post/{post['slug']}")
+        fe.description(post['excerpt'] or post['content'][:200])
+        fe.pubDate(datetime.fromisoformat(post['publish_date']).replace(tzinfo=pytz.UTC))
+        if post['author']:
+            fe.author({'name': post['author'], 'email': 'noemail@confidential'})
+        if post['featured_image']:
+            image_url = request.url_root + f"static/uploads/{post['featured_image']}"
+            fe.enclosure(url=image_url, length='0', type='image/jpeg')
+
+    rss_bytes = fg.rss_str()
+    response = make_response(rss_bytes)
+    response.headers['Content-Type'] = 'application/rss+xml; charset=utf-8'
     return response
 
 @app.route('/<lang>/rss')
