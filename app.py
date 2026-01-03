@@ -956,6 +956,8 @@ def rss_feed_default():
         fe.link(href=request.url_root + f"{post['language']}/post/{post['slug']}")
         fe.description(post['excerpt'] or post['content'][:200])
         fe.pubDate(datetime.fromisoformat(post['publish_date']).replace(tzinfo=pytz.UTC))
+        # Tag entry with language as category
+        fe.category({'term': post['language']})
         if post['author']:
             fe.author({'name': post['author'], 'email': 'noemail@confidential'})
         if post['featured_image']:
