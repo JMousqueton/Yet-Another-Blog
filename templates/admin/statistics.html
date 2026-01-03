@@ -240,7 +240,7 @@
             <tbody>
                 {% set total_traffic = traffic_sources.values()|sum %}
                 {% for source, count in traffic_sources.items() %}
-                <tr>
+                <tr {% if source == 'Other' and other_referrers %}class="expandable-row" style="cursor: pointer;" onclick="toggleOtherDetails()"{% endif %}>
                     <td>
                         {% if source == 'Google' %}
                             <i class="fab fa-google text-danger"></i> Google
@@ -254,6 +254,9 @@
                             <i class="fas fa-link"></i> Direct
                         {% else %}
                             <i class="fas fa-globe"></i> {{ source }}
+                            {% if other_referrers %}
+                                <i class="fas fa-chevron-down ms-2" id="otherChevron" style="font-size: 0.8rem;"></i>
+                            {% endif %}
                         {% endif %}
                     </td>
                     <td class="text-right">
@@ -265,6 +268,28 @@
                         </span>
                     </td>
                 </tr>
+                {% if source == 'Other' and other_referrers %}
+                <tr id="otherDetails" style="display: none;">
+                    <td colspan="3" style="background: #f8f9fa; padding: 1rem;">
+                        <strong class="text-muted" style="font-size: 0.9rem;">Individual Referrers:</strong>
+                        <table class="table table-sm mt-2" style="margin-bottom: 0;">
+                            <tbody>
+                                {% for item in other_referrers %}
+                                <tr>
+                                    <td style="border: none; padding: 0.25rem 0.5rem;">
+                                        <i class="fas fa-external-link-alt text-muted" style="font-size: 0.7rem;"></i>
+                                        <code style="font-size: 0.85rem;">{{ item.referrer }}</code>
+                                    </td>
+                                    <td class="text-right" style="border: none; padding: 0.25rem 0.5rem;">
+                                        <span class="badge badge-info">{{ item.count }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                {% endif %}
                 {% endfor %}
             </tbody>
         </table>
@@ -360,5 +385,21 @@
             }
         }
     });
+    
+    // Toggle Other referrers details
+    function toggleOtherDetails() {
+        const detailsRow = document.getElementById('otherDetails');
+        const chevron = document.getElementById('otherChevron');
+        
+        if (detailsRow) {
+            if (detailsRow.style.display === 'none') {
+                detailsRow.style.display = 'table-row';
+                if (chevron) chevron.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            } else {
+                detailsRow.style.display = 'none';
+                if (chevron) chevron.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            }
+        }
+    }
 </script>
 {% endblock %}

@@ -339,6 +339,8 @@ def get_traffic_sources(days=30):
     
     # Categorize referrers
     sources = defaultdict(int)
+    other_details = []  # Track individual 'Other' referrers
+    
     for row in results:
         referrer = row['referrer'] or 'direct'
         
@@ -354,8 +356,12 @@ def get_traffic_sources(days=30):
             sources['Direct'] += row['count']
         else:
             sources['Other'] += row['count']
+            other_details.append({'referrer': referrer, 'count': row['count']})
     
-    return dict(sorted(sources.items(), key=lambda x: x[1], reverse=True))
+    return {
+        'sources': dict(sorted(sources.items(), key=lambda x: x[1], reverse=True)),
+        'other_details': other_details
+    }
 
 def get_reading_patterns(days=30):
     """Get hourly distribution of views for the last N days."""
@@ -1986,7 +1992,9 @@ def admin_statistics():
         })
     
     # Get traffic sources
-    traffic_sources = get_traffic_sources(days=30)
+    traffic_data = get_traffic_sources(days=30)
+    traffic_sources = traffic_data['sources']
+    other_referrers = traffic_data['other_details']
     
     # Get reading patterns (hourly)
     reading_patterns = get_reading_patterns(days=7)
@@ -1995,6 +2003,7 @@ def admin_statistics():
                          summary=summary,
                          most_viewed=most_viewed_list,
                          traffic_sources=traffic_sources,
+                         other_referrers=other_referrers,
                          reading_patterns=reading_patterns,
                          languages=LANGUAGES)
 
