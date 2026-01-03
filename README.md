@@ -297,24 +297,31 @@ Admin accounts can be secured with TOTP-based 2FA (compatible with Google Authen
 
 ### Environment Variables (.env)
 ```bash  # Minutes between auto-publish checks
+# Server configuration
 HOST=0.0.0.0
-PORT=5001
-DEBUG=False
-BASE_URL=https://yourdomain.com  # For email notifications
+PORT=5000
+DEBUG=True
+BASE_URL=http://localhost:5000
 
-# SMTP Configuration (optional)
-SMTP_HOST=localhost
-SMTP_PORT=1025
-SMTP_LOGIN=
-SMTP_PASSWORD=
-SMTP_FROM=noreply@yourdomain.com
+# Security (IMPORTANT: Change this in production!)
+SECRET_KEY=your-secret-key-change-this-in-production
 
-# Rate Limiting
-RATELIMIT_STORAGE_URL=memory://
-SECRET_KEY=your-secret-key-here
-APP_ID=my-blog
-APP_NAME=My Awesome Blog
+# Database
+DATABASE_PATH=blog.db
+
+# Scheduler settings (minutes)
+SCHEDULER_INTERVAL=5
+
+# Default language
 DEFAULT_LANGUAGE=en
+
+# SMTP Configuration
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_LOGIN=your-email@example.com
+SMTP_PASSWORD=your-password-here
+SMTP_FROM=no-reply@example.com
+```
 
 See `requirements.txt` for complete list.
 
