@@ -843,15 +843,16 @@ def post_detail(lang, slug):
         LIMIT 1
     ''', (lang, now, post['publish_date'])).fetchone()
     
-    # Track view for statistics (without blocking the response)
+    # Track view for statistics (skip internal referrals like julien.io)
     try:
         referrer = request.referrer or 'direct'
-        user_agent = request.headers.get('User-Agent', 'unknown')
-        db.execute('''
-            INSERT INTO post_views (post_id, post_slug, language, referrer, user_agent, viewed_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (post['id'], slug, lang, referrer, user_agent, datetime.now().isoformat()))
-        db.commit()
+        if 'julien.io' not in (referrer or '').lower():
+            user_agent = request.headers.get('User-Agent', 'unknown')
+            db.execute('''
+                INSERT INTO post_views (post_id, post_slug, language, referrer, user_agent, viewed_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (post['id'], slug, lang, referrer, user_agent, datetime.now().isoformat()))
+            db.commit()
     except Exception as e:
         print(f"Error tracking view: {e}")
     
