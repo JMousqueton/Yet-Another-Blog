@@ -648,7 +648,7 @@ def before_request():
     if (request.path.startswith('/static') or 
         request.path.startswith('/set-language') or
         request.path.startswith('/admin') or
-        request.path in ['/sitemap.xml', '/robots.txt', '/rss']):
+        request.path in ['/sitemap.xml', '/robots.txt', '/rss', '/rss/']):
         return
     
     # Check if path starts with language code
@@ -913,6 +913,7 @@ def post_detail_amp(lang, slug):
                          blog_title=blog_title)
 
 @app.route('/rss')
+@app.route('/rss/')
 def rss_feed_default():
     """Generate RSS feed aggregating all enabled languages."""
     enabled_languages = get_enabled_languages()
