@@ -268,7 +268,7 @@
                     </td>
                     <td class="text-right">
                         <span class="badge badge-secondary">
-                            {{ ((count / total_traffic) * 100)|int }}%
+                            {% if total_traffic > 0 %}{{ ((count / total_traffic) * 100)|int }}%{% else %}0%{% endif %}
                         </span>
                     </td>
                 </tr>
