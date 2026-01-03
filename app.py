@@ -1897,6 +1897,29 @@ def api_export_database():
             # Get column names
             columns_info = db.execute(f"PRAGMA table_info({table_name})").fetchall()
             columns = [col['name'] for col in columns_info]
+            
+            # Get all rows
+            rows = db.execute(f"SELECT * FROM {table_name}").fetchall()
+            
+            # Convert to list of dictionaries
+            export_data['tables'][table_name] = {
+                'columns': columns,
+                'rows': [dict(row) for row in rows]
+            }
+        
+        # Convert to JSON
+        json_data = json.dumps(export_data, indent=2, default=str)
+        
+        # Create response with download headers
+        response = make_response(json_data)
+        response.headers['Content-Type'] = 'application/json'
+        response.headers['Content-Disposition'] = f'attachment; filename=blog_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+        
+        return response
+        
+    except Exception as e:
+        print(f"Export error: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/admin/api/purge-old-views', methods=['POST'])
 @login_required
@@ -1923,30 +1946,6 @@ def api_purge_old_views():
             'success': False,
             'error': str(e)
         }), 500
-
-            
-            # Get all rows
-            rows = db.execute(f"SELECT * FROM {table_name}").fetchall()
-            
-            # Convert to list of dictionaries
-            export_data['tables'][table_name] = {
-                'columns': columns,
-                'rows': [dict(row) for row in rows]
-            }
-        
-        # Convert to JSON
-        json_data = json.dumps(export_data, indent=2, default=str)
-        
-        # Create response with download headers
-        response = make_response(json_data)
-        response.headers['Content-Type'] = 'application/json'
-        response.headers['Content-Disposition'] = f'attachment; filename=blog_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-        
-        return response
-        
-    except Exception as e:
-        print(f"Export error: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @app.route('/admin/api/import-database', methods=['POST'])
