@@ -95,6 +95,8 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 - Python 3.8+
 - pip
 
+See `requirements.txt` for complete list.
+
 ### Installation
 
 1. **Clone and setup environment**:
@@ -322,8 +324,6 @@ SMTP_LOGIN=your-email@example.com
 SMTP_PASSWORD=your-password-here
 SMTP_FROM=no-reply@example.com
 ```
-
-See `requirements.txt` for complete list.
 
 ## 🤝 Contributing
 
