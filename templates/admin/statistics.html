@@ -244,12 +244,16 @@
                     <td>
                         {% if source == 'Google' %}
                             <i class="fab fa-google text-danger"></i> Google
+                        {% elif source == 'Yahoo' %}
+                            <i class="fab fa-yahoo" style="color: #5f01d1;"></i> Yahoo
                         {% elif source == 'Facebook' %}
                             <i class="fab fa-facebook text-primary"></i> Facebook
                         {% elif source == 'Twitter/X' %}
                             <i class="fab fa-x-twitter"></i> Twitter/X
                         {% elif source == 'LinkedIn' %}
                             <i class="fab fa-linkedin text-info"></i> LinkedIn
+                        {% elif source == 'Bluesky' %}
+                            <i class="fas fa-cloud" style="color: #1185fe;"></i> Bluesky
                         {% elif source == 'Direct' %}
                             <i class="fas fa-link"></i> Direct
                         {% else %}

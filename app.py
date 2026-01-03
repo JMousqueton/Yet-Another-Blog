@@ -346,12 +346,16 @@ def get_traffic_sources(days=30):
         
         if 'google' in referrer.lower():
             sources['Google'] += row['count']
+        elif 'yahoo' in referrer.lower():
+            sources['Yahoo'] += row['count']
         elif 'facebook' in referrer.lower():
             sources['Facebook'] += row['count']
         elif 'twitter' in referrer.lower() or 'x.com' in referrer.lower():
             sources['Twitter/X'] += row['count']
         elif 'linkedin' in referrer.lower():
             sources['LinkedIn'] += row['count']
+        elif 'bsky.app' in referrer.lower():
+            sources['Bluesky'] += row['count']
         elif referrer == 'direct':
             sources['Direct'] += row['count']
         else:
