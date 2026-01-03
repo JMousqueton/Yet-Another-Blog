@@ -350,7 +350,7 @@ def get_traffic_sources(days=30):
             sources['Yahoo'] += row['count']
         elif 'facebook' in referrer.lower():
             sources['Facebook'] += row['count']
-        elif 'twitter' in referrer.lower() or 'x.com' in referrer.lower():
+        elif 'twitter' in referrer.lower() or 'x.com' in referrer.lower() or 't.co' in referrer.lower():
             sources['Twitter/X'] += row['count']
         elif 'linkedin' in referrer.lower():
             sources['LinkedIn'] += row['count']
