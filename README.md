@@ -60,7 +60,16 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 - **Expandable Details**: Click "Other" traffic sources to see top 10 individual referrers
 - **Auto-Cleanup**: Automatically purges view data older than 30 days
 
-### 🛠️ Developer Features
+### � Security Features
+- **Two-Factor Authentication (2FA)**: TOTP-based authentication for admin accounts
+- **Session Security**: HTTPONLY, SECURE (production), SAMESITE cookies
+- **Rate Limiting**: Protection against brute force and API abuse
+- **CSRF Protection**: Flask-WTF tokens on all forms
+- **Content Security Policy**: Whitelisted external domains
+- **Real IP Detection**: ProxyFix for accurate rate limiting behind proxies
+- **Referrer Filtering**: Excludes internal traffic from analytics
+
+### �🛠️ Developer Features
 - **Database Tools**: Export/import scripts for backups
 - **Sample Data**: Quick population with test posts
 - **Environment Config**: `.env` file support
@@ -262,6 +271,29 @@ LANGUAGES = {
 3. **Restart application**
 
 ## ⚙️ Configuration
+
+### Two-Factor Authentication (2FA)
+
+Admin accounts can be secured with TOTP-based 2FA (compatible with Google Authenticator, Authy, 1Password, etc.):
+
+1. **Enable 2FA**:
+   - Log in to admin panel
+   - Go to Admin → Authors → Edit your profile (or click your name)
+   - Scroll to "Security Settings" section
+   - Click "Manage 2FA"
+   - Click "Start Setup" and scan QR code with authenticator app
+   - Enter 6-digit code to confirm
+
+2. **Login with 2FA**:
+   - Enter email/password as usual
+   - You'll be redirected to enter 6-digit code from your authenticator app
+   - Code expires every 30 seconds
+
+3. **Disable 2FA**:
+   - Go to Security Settings → Manage 2FA
+   - Enter current 6-digit code to disable
+
+**Note**: Each admin can manage their own 2FA independently. No global 2FA enforcement.
 
 ### Environment Variables (.env)
 ```bash  # Minutes between auto-publish checks

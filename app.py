@@ -21,6 +21,9 @@ from flask_wtf.csrf import CSRFProtect
 import re
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import pyotp
+import qrcode
+import base64
 
 # Load environment variables
 load_dotenv()
@@ -435,6 +438,16 @@ def migrate_database():
             cursor.execute("ALTER TABLE authors ADD COLUMN profile_image TEXT")
             conn.commit()
             print("✓ Added profile_image column to authors table")
+        
+        if 'totp_secret' not in columns:
+            cursor.execute("ALTER TABLE authors ADD COLUMN totp_secret TEXT")
+            conn.commit()
+            print("✓ Added totp_secret column to authors table")
+        
+        if 'totp_enabled' not in columns:
+            cursor.execute("ALTER TABLE authors ADD COLUMN totp_enabled INTEGER DEFAULT 0")
+            conn.commit()
+            print("✓ Added totp_enabled column to authors table")
         
         # Check if featured_image column exists in posts table
         cursor.execute("PRAGMA table_info(posts)")
@@ -1213,16 +1226,57 @@ def admin_login():
         ''', (email,)).fetchone()
         
         if user and check_password_hash(user['password'], password):
-            session['user_id'] = user['id']
-            session['user_name'] = user['name']
-            session['user_email'] = user['email']
-            session['is_admin'] = bool(int(user['is_admin']))  # normalize to real bool
-            flash('Successfully logged in!', 'success')
-            return redirect(url_for('admin_dashboard'))
+            # Check if 2FA is enabled
+            if user['totp_enabled']:
+                # Store user_id temporarily for 2FA verification
+                session['pending_2fa_user_id'] = user['id']
+                session['pending_2fa_user_name'] = user['name']
+                session['pending_2fa_user_email'] = user['email']
+                session['pending_2fa_is_admin'] = bool(int(user['is_admin']))
+                return redirect(url_for('admin_2fa_verify'))
+            else:
+                # No 2FA, log in directly
+                session['user_id'] = user['id']
+                session['user_name'] = user['name']
+                session['user_email'] = user['email']
+                session['is_admin'] = bool(int(user['is_admin']))
+                flash('Successfully logged in!', 'success')
+                return redirect(url_for('admin_dashboard'))
         else:
             flash('Invalid email or password', 'error')
     
     return render_template('admin/login.html')
+
+@app.route('/admin/2fa-verify', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
+def admin_2fa_verify():
+    """2FA verification page."""
+    if 'pending_2fa_user_id' not in session:
+        flash('Invalid session. Please log in again.', 'error')
+        return redirect(url_for('admin_login'))
+    
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+        
+        db = get_db()
+        user = db.execute('SELECT * FROM authors WHERE id = ?', (session['pending_2fa_user_id'],)).fetchone()
+        
+        if user and user['totp_secret']:
+            totp = pyotp.TOTP(user['totp_secret'])
+            if totp.verify(code, valid_window=1):
+                # 2FA successful, complete login
+                session['user_id'] = session.pop('pending_2fa_user_id')
+                session['user_name'] = session.pop('pending_2fa_user_name')
+                session['user_email'] = session.pop('pending_2fa_user_email')
+                session['is_admin'] = session.pop('pending_2fa_is_admin')
+                flash('Successfully logged in with 2FA!', 'success')
+                return redirect(url_for('admin_dashboard'))
+            else:
+                flash('Invalid 2FA code. Please try again.', 'error')
+        else:
+            flash('2FA configuration error. Please contact administrator.', 'error')
+    
+    return render_template('admin/2fa_verify.html')
 
 @app.route('/admin/logout')
 def admin_logout():
@@ -1230,6 +1284,88 @@ def admin_logout():
     session.clear()
     flash('Successfully logged out', 'success')
     return redirect(url_for('admin_login'))
+
+@app.route('/admin/2fa/setup', methods=['GET', 'POST'])
+@login_required
+def admin_2fa_setup():
+    """Setup 2FA for current user."""
+    db = get_db()
+    user = db.execute('SELECT * FROM authors WHERE id = ?', (session['user_id'],)).fetchone()
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'enable':
+            # Generate new TOTP secret
+            secret = pyotp.random_base32()
+            totp = pyotp.TOTP(secret)
+            
+            # Generate QR code
+            provisioning_uri = totp.provisioning_uri(
+                name=user['email'],
+                issuer_name=app.config['APP_NAME']
+            )
+            
+            qr = qrcode.QRCode(version=1, box_size=10, border=5)
+            qr.add_data(provisioning_uri)
+            qr.make(fit=True)
+            
+            img = qr.make_image(fill_color="black", back_color="white")
+            buffered = io.BytesIO()
+            img.save(buffered, format="PNG")
+            qr_code_data = base64.b64encode(buffered.getvalue()).decode()
+            
+            # Store secret temporarily in session
+            session['temp_totp_secret'] = secret
+            
+            return render_template('admin/2fa_setup.html',
+                                 user=user,
+                                 qr_code=qr_code_data,
+                                 secret=secret,
+                                 setup_step='verify')
+        
+        elif action == 'verify':
+            code = request.form.get('code', '').strip()
+            secret = session.get('temp_totp_secret')
+            
+            if secret:
+                totp = pyotp.TOTP(secret)
+                if totp.verify(code, valid_window=1):
+                    # Save secret and enable 2FA
+                    db.execute('''
+                        UPDATE authors
+                        SET totp_secret = ?, totp_enabled = 1
+                        WHERE id = ?
+                    ''', (secret, session['user_id']))
+                    db.commit()
+                    session.pop('temp_totp_secret', None)
+                    flash('2FA enabled successfully!', 'success')
+                    return redirect(url_for('admin_edit_author', author_id=session['user_id']))
+                else:
+                    flash('Invalid code. Please try again.', 'error')
+                    return redirect(url_for('admin_2fa_setup'))
+            else:
+                flash('Session expired. Please try again.', 'error')
+                return redirect(url_for('admin_2fa_setup'))
+        
+        elif action == 'disable':
+            verify_code = request.form.get('code', '').strip()
+            
+            if user['totp_secret']:
+                totp = pyotp.TOTP(user['totp_secret'])
+                if totp.verify(verify_code, valid_window=1):
+                    db.execute('''
+                        UPDATE authors
+                        SET totp_secret = NULL, totp_enabled = 0
+                        WHERE id = ?
+                    ''', (session['user_id'],))
+                    db.commit()
+                    flash('2FA disabled successfully!', 'success')
+                    return redirect(url_for('admin_edit_author', author_id=session['user_id']))
+                else:
+                    flash('Invalid code. 2FA not disabled.', 'error')
+    
+    return render_template('admin/2fa_setup.html', user=user, setup_step='start')
 
 @app.route('/admin')
 @app.route('/admin/dashboard')
