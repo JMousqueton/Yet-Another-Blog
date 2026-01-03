@@ -362,9 +362,12 @@ def get_traffic_sources(days=30):
             sources['Other'] += row['count']
             other_details.append({'referrer': referrer, 'count': row['count']})
     
+    # Sort other_details by count and keep only top 10
+    other_details_sorted = sorted(other_details, key=lambda x: x['count'], reverse=True)[:10]
+    
     return {
         'sources': dict(sorted(sources.items(), key=lambda x: x[1], reverse=True)),
-        'other_details': other_details
+        'other_details': other_details_sorted
     }
 
 def get_reading_patterns(days=30):
