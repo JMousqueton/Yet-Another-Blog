@@ -69,6 +69,31 @@
             margin-right: 0.75rem;
             width: 20px;
         }
+
+        .sidebar-menu .submenu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .sidebar-menu .submenu.show {
+            max-height: 500px;
+        }
+
+        .sidebar-menu .submenu li a {
+            padding-left: 3.5rem;
+            font-size: 0.9rem;
+            border-left: none;
+        }
+
+        .sidebar-menu .submenu li a:hover,
+        .sidebar-menu .submenu li a.active {
+            border-left: 4px solid #3498db;
+            padding-left: calc(3.5rem - 4px);
+        }
         
         .main-content {
             margin-left: 250px;
@@ -83,6 +108,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            width: 100%;
+        }
+
+        .top-bar h2 {
+            flex: 1;
         }
     </style>
     {% block extra_styles %}{% endblock %}
@@ -96,10 +126,18 @@
         </div>
         <ul class="sidebar-menu">
             <li><a href="{{ url_for('admin_dashboard') }}" {% if active_page == 'dashboard' %}class="active"{% endif %}><i class="fas fa-th-large"></i> Dashboard</a></li>
-            <li><a href="{{ url_for('admin_posts') }}" {% if active_page == 'posts' %}class="active"{% endif %}><i class="fas fa-file-alt"></i> Posts</a></li>
-            <li><a href="{{ url_for('admin_new_post') }}" {% if active_page == 'new_post' %}class="active"{% endif %}><i class="fas fa-plus-circle"></i> New Post</a></li>
-            <li><a href="{{ url_for('admin_pages') }}" {% if active_page == 'pages' %}class="active"{% endif %}><i class="fas fa-file"></i> Pages</a></li>
-            <li><a href="{{ url_for('admin_new_page') }}" {% if active_page == 'new_page' %}class="active"{% endif %}><i class="fas fa-plus"></i> New Page</a></li>
+            <li>
+                <a href="{{ url_for('admin_posts') }}" class="toggle-submenu {% if active_page in ['posts', 'new_post'] %}collapsed{% endif %}" data-target="posts-submenu" {% if active_page in ['posts', 'new_post'] %}class="toggle-submenu"{% else %}class="toggle-submenu collapsed"{% endif %}><i class="fas fa-file-alt"></i> Posts</a>
+                <ul class="submenu {% if active_page in ['posts', 'new_post'] %}show{% endif %}" id="posts-submenu">
+                    <li><a href="{{ url_for('admin_new_post') }}" {% if active_page == 'new_post' %}class="active"{% endif %}><i class="fa-solid fa-plus"></i> New Post</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="{{ url_for('admin_pages') }}" class="toggle-submenu {% if active_page in ['pages', 'new_page'] %}collapsed{% endif %}" data-target="pages-submenu" {% if active_page in ['pages', 'new_page'] %}class="toggle-submenu"{% else %}class="toggle-submenu collapsed"{% endif %}><i class="fas fa-file"></i> Pages</a>
+                <ul class="submenu {% if active_page in ['pages', 'new_page'] %}show{% endif %}" id="pages-submenu">
+                    <li><a href="{{ url_for('admin_new_page') }}" {% if active_page == 'new_page' %}class="active"{% endif %}><i class="fa-solid fa-plus"></i> New Page</a></li>
+                </ul>
+            </li>
             <li><a href="{{ url_for('admin_contact_messages') }}" {% if active_page == 'contact_messages' %}class="active"{% endif %}><i class="fas fa-inbox"></i> Messages {% if contact_unread_count %}<span class="badge bg-danger rounded-pill ms-1">{{ contact_unread_count }}</span>{% endif %}</a></li>
             <li><a href="{{ url_for('admin_comments') }}" {% if active_page == 'comments' %}class="active"{% endif %}><i class="fas fa-comments"></i> Comments {% if comment_pending_count %}<span class="badge bg-warning text-dark rounded-pill ms-1">{{ comment_pending_count }}</span>{% endif %}</a></li>
             <li><a href="{{ url_for('admin_statistics') }}" {% if active_page == 'statistics' %}class="active"{% endif %}><i class="fas fa-chart-line"></i> Statistics</a></li>
@@ -140,6 +178,18 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script>
+        // Handle submenu toggle
+        document.querySelectorAll('.toggle-submenu').forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+                const target = document.getElementById(this.dataset.target);
+                if (target) {
+                    target.classList.toggle('show');
+                    this.classList.toggle('collapsed');
+                }
+            });
+        });
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

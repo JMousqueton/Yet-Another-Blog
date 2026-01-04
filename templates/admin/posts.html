@@ -3,7 +3,14 @@
 
 {% block title %}Posts{% endblock %}
 
-{% block page_header %}<i class="fas fa-file-alt"></i> Posts{% endblock %}
+{% block page_header %}
+    <div style="display: flex; justify-content: space-between; align-items: center; flex: 1; width: 100%;">
+        <span><i class="fas fa-file-alt"></i> Posts</span>
+        <a href="{{ url_for('admin_new_post') }}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> New Post
+        </a>
+    </div>
+{% endblock %}
 
 {% block extra_styles %}
     <style>

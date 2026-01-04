@@ -3,7 +3,14 @@
 
 {% block title %}Pages{% endblock %}
 
-{% block page_header %}<i class="fas fa-file"></i> Pages{% endblock %}
+{% block page_header %}
+    <div style="display: flex; justify-content: space-between; align-items: center; flex: 1; width: 100%;">
+        <span><i class="fas fa-file"></i> Pages</span>
+        <a href="{{ url_for('admin_new_page') }}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> New Page
+        </a>
+    </div>
+{% endblock %}
 
 {% block extra_styles %}
 <style>
