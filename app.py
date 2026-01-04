@@ -24,6 +24,7 @@ from flask_limiter.util import get_remote_address
 import pyotp
 import qrcode
 import base64
+import random
 
 # Load environment variables
 load_dotenv()
@@ -282,6 +283,27 @@ def get_disclaimer_page(lang):
         print(f"Error fetching disclaimer page for {lang}: {e}")
     return None
 
+def generate_captcha(lang):
+    """Generate a simple addition captcha using number words per language."""
+    translations = TRANSLATIONS.get(lang, TRANSLATIONS.get('en', {}))
+    lang_words = translations.get('contact', {}).get('captcha_numbers')
+    if not lang_words:
+        lang_words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+    a = random.randint(1, 4)
+    b = random.randint(1, 5)
+    prompt = f"{lang_words[a]} + {lang_words[b]} ="
+    return prompt, a + b
+
+def get_unread_contact_count():
+    """Return count of unread contact messages."""
+    try:
+        db = get_db()
+        row = db.execute('SELECT COUNT(*) as c FROM contact_messages WHERE is_read = 0').fetchone()
+        return row['c'] if row else 0
+    except Exception as e:
+        print(f"Error counting contact messages: {e}")
+        return 0
+
 @app.context_processor
 def inject_global_settings():
     """Inject commonly used settings and translations into all templates."""
@@ -305,7 +327,8 @@ def inject_global_settings():
         'blog_title': blog_title,
         't': translations,
         'lang': current_lang,  # Ensure lang is always available in templates
-        'disclaimer_page': get_disclaimer_page(current_lang)
+        'disclaimer_page': get_disclaimer_page(current_lang),
+        'contact_unread_count': get_unread_contact_count() if session.get('is_admin') else 0
     }
 
 def get_enabled_languages():
@@ -536,6 +559,24 @@ def migrate_database():
             cursor.execute("ALTER TABLE pages ADD COLUMN author TEXT")
             conn.commit()
             print("✓ Added author column to pages table")
+
+        # Contact messages table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS contact_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                subject TEXT,
+                message TEXT NOT NULL,
+                language TEXT NOT NULL CHECK(language IN ('en', 'fr', 'de')),
+                is_read INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_contact_messages_lang_read
+            ON contact_messages(language, is_read, created_at DESC)
+        ''')
 
         # Remove deprecated excerpt column by recreating table without it
         if 'excerpt' in pages_columns:
@@ -1147,6 +1188,98 @@ def page_detail_amp(lang, slug):
                          lang=lang,
                          blog_title=blog_title)
 
+
+@app.route('/<lang>/contact', methods=['GET', 'POST'])
+def contact(lang):
+    """Contact form per language, stores messages for admins."""
+    if lang not in LANGUAGES:
+        return redirect(url_for('index', lang=DEFAULT_LANGUAGE))
+
+    enabled_languages = get_enabled_languages()
+    if lang not in enabled_languages:
+        abort(404)
+
+    g.language = lang
+    db = get_db()
+
+    t_contact = TRANSLATIONS.get(lang, TRANSLATIONS.get('en', {})).get('contact', {})
+    error_required = t_contact.get('error_required', 'Please fill in your name, email, and message.')
+    success_msg = t_contact.get('success', 'Message sent! We will get back to you soon.')
+    error_generic = t_contact.get('error_generic', 'Error sending message.')
+    error_captcha = t_contact.get('error_captcha', 'Captcha is incorrect. Please try again.')
+
+    def new_captcha():
+        prompt, answer = generate_captcha(lang)
+        session['captcha_prompt'] = prompt
+        session['captcha_answer'] = answer
+        return prompt
+
+    # Always generate a fresh captcha for each page load
+    captcha_prompt = new_captcha()
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        subject = request.form.get('subject', '').strip()
+        message = request.form.get('message', '').strip()
+        captcha_input = request.form.get('captcha_answer', '').strip()
+        expected = session.get('captcha_answer')
+
+        if not (captcha_input.isdigit() and expected is not None and int(captcha_input) == expected):
+            flash(error_captcha, 'error')
+            captcha_prompt = new_captcha()
+        elif not all([name, email, message]):
+            flash(error_required, 'error')
+            captcha_prompt = new_captcha()
+        else:
+            try:
+                db.execute('''
+                    INSERT INTO contact_messages (name, email, subject, message, language)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (name, email, subject, message, lang))
+                db.commit()
+                admin_email = (get_setting('admin_email', '') or '').strip()
+                if admin_email:
+                    email_subject = f"[Contact {lang.upper()}] {subject or 'New message'}"
+                    email_body = f"""
+                        <p>You have received a new contact message.</p>
+                        <ul>
+                            <li><strong>Name:</strong> {name}</li>
+                            <li><strong>Email:</strong> {email}</li>
+                            <li><strong>Language:</strong> {lang.upper()}</li>
+                            <li><strong>Subject:</strong> {subject or '—'}</li>
+                        </ul>
+                        <p><strong>Message:</strong></p>
+                        <pre style='white-space:pre-wrap;font-family:inherit;'>{message}</pre>
+                    """
+                    send_email(admin_email, email_subject, email_body)
+
+                flash(success_msg, 'success')
+                return redirect(url_for('contact', lang=lang))
+            except Exception as e:
+                flash(f"{error_generic} {str(e)}", 'error')
+                captcha_prompt = new_captcha()
+
+    meta_description = get_setting(f'blog_description_{lang}', get_setting('blog_description_en', ''))
+    blog_title = get_setting(f'blog_title_{lang}', get_setting('blog_title', 'My Blog'))
+    blog_subtitle = get_setting(f'blog_subtitle_{lang}', get_setting('blog_subtitle_en', ''))
+    meta_title = f"{blog_title} - Contact"
+    meta_url = request.url
+    template_css = get_setting('template_css', 'default.css')
+
+    return render_template('contact.html',
+                         lang=lang,
+                         languages=enabled_languages,
+                         template_css=template_css,
+                         blog_title=blog_title,
+                         blog_subtitle=blog_subtitle,
+                         meta_title=meta_title,
+                         meta_description=meta_description,
+                         meta_url=meta_url,
+                         meta_type='website',
+                         captcha_prompt=captcha_prompt,
+                         form_data=request.form if request.method == 'POST' else {})
+
 @app.route('/rss')
 @app.route('/rss/')
 def rss_feed_default():
@@ -1735,6 +1868,85 @@ def admin_pages():
                          search_query=search_query,
                          languages=LANGUAGES,
                          is_admin_user=is_admin_user)
+
+
+@app.route('/admin/contact-messages')
+@login_required
+@admin_required
+def admin_contact_messages():
+    """Inbox listing for contact form submissions."""
+    db = get_db()
+    language_filter = request.args.get('language', 'all')
+    status_filter = request.args.get('status', 'all')
+
+    query = 'SELECT * FROM contact_messages WHERE 1=1'
+    params = []
+
+    if language_filter != 'all':
+        query += ' AND language = ?'
+        params.append(language_filter)
+
+    if status_filter == 'unread':
+        query += ' AND is_read = 0'
+    elif status_filter == 'read':
+        query += ' AND is_read = 1'
+
+    query += ' ORDER BY created_at DESC'
+
+    messages = db.execute(query, params).fetchall()
+
+    return render_template('admin/contact_messages.html',
+                         messages=messages,
+                         languages=LANGUAGES,
+                         language_filter=language_filter,
+                         status_filter=status_filter)
+
+
+@app.route('/admin/contact-messages/<int:message_id>')
+@login_required
+@admin_required
+def admin_view_contact_message(message_id):
+    """View a single contact message and mark it read."""
+    db = get_db()
+    message = db.execute('SELECT * FROM contact_messages WHERE id = ?', (message_id,)).fetchone()
+    if not message:
+        flash('Message not found', 'error')
+        return redirect(url_for('admin_contact_messages'))
+
+    if not message['is_read']:
+        db.execute('UPDATE contact_messages SET is_read = 1 WHERE id = ?', (message_id,))
+        db.commit()
+
+    return render_template('admin/contact_message_detail.html', message=message)
+
+
+@app.route('/admin/contact-messages/<int:message_id>/mark-unread', methods=['POST'])
+@login_required
+@admin_required
+def admin_mark_contact_unread(message_id):
+    db = get_db()
+    db.execute('UPDATE contact_messages SET is_read = 0 WHERE id = ?', (message_id,))
+    db.commit()
+    flash('Message marked as unread', 'success')
+    ref = request.referrer or ''
+    if '/admin/contact-messages' in ref:
+        return redirect(ref)
+    return redirect(url_for('admin_contact_messages'))
+
+
+@app.route('/admin/contact-messages/<int:message_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_contact_message(message_id):
+    db = get_db()
+    message = db.execute('SELECT id FROM contact_messages WHERE id = ?', (message_id,)).fetchone()
+    if not message:
+        flash('Message not found', 'error')
+        return redirect(url_for('admin_contact_messages'))
+    db.execute('DELETE FROM contact_messages WHERE id = ?', (message_id,))
+    db.commit()
+    flash('Message deleted', 'success')
+    return redirect(url_for('admin_contact_messages'))
 
 @app.route('/admin/posts/delete/<int:post_id>', methods=['POST'])
 @login_required

@@ -1,0 +1,80 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'contact_messages' %}
+
+{% block title %}Contact Messages{% endblock %}
+{% block page_header %}<i class="fas fa-inbox"></i> Contact Messages{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <form class="row g-3 mb-4" method="get">
+            <div class="col-md-4">
+                <label class="form-label">Language</label>
+                <select class="form-select" name="language" onchange="this.form.submit()">
+                    <option value="all" {% if language_filter == 'all' %}selected{% endif %}>All</option>
+                    {% for code, info in languages.items() %}
+                    <option value="{{ code }}" {% if language_filter == code %}selected{% endif %}>{{ info.flag }} {{ info.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status" onchange="this.form.submit()">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+                    <option value="unread" {% if status_filter == 'unread' %}selected{% endif %}>Unread</option>
+                    <option value="read" {% if status_filter == 'read' %}selected{% endif %}>Read</option>
+                </select>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>When</th>
+                        <th>From</th>
+                        <th>Subject</th>
+                        <th>Language</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for msg in messages %}
+                    <tr class="{% if not msg.is_read %}table-light{% endif %}">
+                        <td>{{ msg.created_at[:16] }}</td>
+                        <td>
+                            <strong>{{ msg.name }}</strong><br>
+                            <span class="text-muted small">{{ msg.email }}</span>
+                        </td>
+                        <td>{{ msg.subject or '—' }}</td>
+                        <td>{{ msg.language|upper }}</td>
+                        <td>
+                            {% if msg.is_read %}
+                            <form method="POST" action="{{ url_for('admin_mark_contact_unread', message_id=msg.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                <button class="badge bg-secondary border-0" type="submit" style="cursor: pointer;">Read</button>
+                            </form>
+                            {% else %}
+                            <span class="badge bg-primary">Unread</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <form method="POST" action="{{ url_for('admin_delete_contact_message', message_id=msg.id) }}" class="d-inline" onsubmit="return confirm('Delete this message?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="fas fa-trash"></i></button>
+                            </form>
+                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin_view_contact_message', message_id=msg.id) }}">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">No messages yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

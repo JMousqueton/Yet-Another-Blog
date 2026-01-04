@@ -1,7 +1,8 @@
 {
   "nav": {
     "home": "Startseite",
-    "rss": "RSS"
+    "rss": "RSS",
+    "contact": "Kontakt"
   },
   "language_modal": {
     "title": "Wählen Sie Ihre Sprache"
@@ -46,6 +47,26 @@
     "all_rights_reserved": "Alle Rechte vorbehalten.",
     "subscribe_rss": "RSS abonnieren",
     "disclaimer": "Haftungsausschluss"
+  },
+  "contact": {
+    "title": "Kontakt",
+    "intro": "Haben Sie Fragen oder Feedback? Schreiben Sie uns unten.",
+    "name": "Name",
+    "name_placeholder": "Ihr Name",
+    "email": "E-Mail",
+    "subject": "Betreff",
+    "subject_placeholder": "Wie können wir helfen?",
+    "message": "Nachricht",
+    "message_placeholder": "Ihre Nachricht...",
+    "send": "Nachricht senden",
+    "response_time": "Wir antworten in der Regel innerhalb von zwei Werktagen.",
+    "success": "Nachricht gesendet! Wir melden uns bald.",
+    "error_required": "Bitte Name, E-Mail und Nachricht ausfüllen.",
+    "error_generic": "Fehler beim Senden der Nachricht.",
+    "error_captcha": "Captcha ist falsch. Bitte erneut versuchen.",
+    "captcha_label": "Anti-Spam:",
+    "captcha_placeholder": "Geben Sie das Ergebnis als Zahl ein (z. B. 10, 12)",
+    "captcha_numbers": ["Null", "Eins", "Zwei", "Drei", "Vier", "Fuenf", "Sechs", "Sieben", "Acht", "Neun"]
   },
   "locations": {
     "home": "Startseite",

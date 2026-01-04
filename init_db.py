@@ -91,6 +91,24 @@ def init_database():
         CREATE INDEX IF NOT EXISTS idx_pages_language_status 
         ON pages(language, status, publish_date)
     ''')
+
+    # Create contact messages table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contact_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            subject TEXT,
+            message TEXT NOT NULL,
+            language TEXT NOT NULL CHECK(language IN ('en', 'fr', 'de')),
+            is_read INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_contact_messages_lang_read
+        ON contact_messages(language, is_read, created_at DESC)
+    ''')
     
     # Create post_views table for statistics tracking
     cursor.execute('''

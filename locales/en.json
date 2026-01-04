@@ -1,7 +1,8 @@
 {
   "nav": {
     "home": "Home",
-    "rss": "RSS"
+    "rss": "RSS",
+    "contact": "Contact"
   },
   "language_modal": {
     "title": "Choose Your Language"
@@ -46,6 +47,26 @@
     "all_rights_reserved": "All rights reserved.",
     "subscribe_rss": "Subscribe via RSS",
     "disclaimer": "Disclaimer"
+  },
+  "contact": {
+    "title": "Contact",
+    "intro": "Have a question or feedback? Drop us a note below.",
+    "name": "Name",
+    "name_placeholder": "Your name",
+    "email": "Email",
+    "subject": "Subject",
+    "subject_placeholder": "How can we help?",
+    "message": "Message",
+    "message_placeholder": "Write your message here...",
+    "send": "Send message",
+    "response_time": "We usually respond within 2 business days.",
+    "success": "Message sent! We will get back to you soon.",
+    "error_required": "Please fill in your name, email, and message.",
+    "error_generic": "Error sending message.",
+    "error_captcha": "Captcha is incorrect. Please try again.",
+    "captcha_label": "Anti-spam:",
+    "captcha_placeholder": "Enter the result in figures (e.g. 10, 12)",
+    "captcha_numbers": ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
   },
   "locations": {
     "home": "Home",
