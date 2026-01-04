@@ -27,6 +27,10 @@
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
     }
     
+    .stat-card.month {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
     .stat-card.time {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     }
@@ -159,6 +163,15 @@
                 </div>
                 <div class="stat-label">Today's Views</div>
                 <div class="stat-value">{{ summary.today_views }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card month">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="stat-label">Last 30 Days Views</div>
+                <div class="stat-value">{{ summary.last_30_days_views }}</div>
             </div>
         </div>
     </div>

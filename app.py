@@ -512,9 +512,21 @@ def get_dashboard_summary(lang=None):
     else:
         today_views = db.execute(today_query).fetchone()['count']
     
+    # Get last 30 days views
+    last_30_days_query = '''
+        SELECT COUNT(*) as count FROM post_views
+        WHERE DATE(viewed_at) >= DATE('now', '-30 days')
+    '''
+    if lang:
+        last_30_days_query += ' AND language = ?'
+        last_30_days_views = db.execute(last_30_days_query, (lang,)).fetchone()['count']
+    else:
+        last_30_days_views = db.execute(last_30_days_query).fetchone()['count']
+    
     return {
         'total_views': total_views,
-        'today_views': today_views
+        'today_views': today_views,
+        'last_30_days_views': last_30_days_views
     }
 
 def migrate_database():
