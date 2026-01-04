@@ -279,12 +279,28 @@
     <script>
         // Generate slug from title
         function generateSlug() {
-            const title = document.getElementById('title').value;
-            const slug = title.toLowerCase()
-                .replace(/[^a-z0-9\s-]/g, '')
+            const title = document.getElementById('title').value || '';
+            const map = {
+                'ß': 'ss', 'ä': 'a', 'ö': 'o', 'ü': 'u', 'Ä': 'a', 'Ö': 'o', 'Ü': 'u',
+                'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+                'à': 'a', 'â': 'a', 'á': 'a',
+                'ç': 'c',
+                'î': 'i', 'ï': 'i', 'ì': 'i', 'í': 'i',
+                'ô': 'o', 'ò': 'o', 'ó': 'o',
+                'ù': 'u', 'û': 'u', 'ú': 'u',
+                'ÿ': 'y'
+            };
+            let normalized = title.toLowerCase();
+            Object.keys(map).forEach(k => {
+                normalized = normalized.replace(new RegExp(k, 'g'), map[k]);
+            });
+            normalized = normalized.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+            const slug = normalized
+                .replace(/[^a-z0-9\s-]/g, '-')
                 .replace(/\s+/g, '-')
                 .replace(/-+/g, '-')
-                .trim();
+                .trim()
+                .replace(/^-+|-+$/g, '') || 'post';
             document.getElementById('slug').value = slug;
         }
         

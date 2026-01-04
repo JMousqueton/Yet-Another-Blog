@@ -25,6 +25,7 @@ import pyotp
 import qrcode
 import base64
 import random
+import unicodedata
 
 # Load environment variables
 load_dotenv()
@@ -266,6 +267,33 @@ def get_disclaimer_page(lang):
     slug = get_setting(f'disclaimer_page_{lang}', '')
     if not slug:
         return None
+
+def normalize_slug(value):
+    """Normalize titles/slugs by stripping accents and special chars.
+
+    Handles French and German diacritics (é, è, à, ç, ä, ö, ü, ß -> ss, etc.).
+    """
+    if not value:
+        return ''
+    value = value.strip().lower()
+    replacements = {
+        'ß': 'ss', 'ä': 'a', 'ö': 'o', 'ü': 'u', 'Ä': 'a', 'Ö': 'o', 'Ü': 'u',
+        'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+        'à': 'a', 'â': 'a', 'á': 'a',
+        'ç': 'c',
+        'î': 'i', 'ï': 'i', 'ì': 'i', 'í': 'i',
+        'ô': 'o', 'ò': 'o', 'ó': 'o',
+        'ù': 'u', 'û': 'u', 'ú': 'u',
+        'ÿ': 'y'
+    }
+    for src, tgt in replacements.items():
+        value = value.replace(src, tgt)
+    # Strip remaining accents
+    value = ''.join(c for c in unicodedata.normalize('NFKD', value) if not unicodedata.combining(c))
+    # Keep alphanumerics and hyphens
+    value = re.sub(r'[^a-z0-9]+', '-', value)
+    value = value.strip('-')
+    return value or 'post'
     try:
         db = get_db()
         page = db.execute('''
@@ -2415,19 +2443,13 @@ def admin_new_post():
     
     if request.method == 'POST':
         title = request.form.get('title')
-        slug = request.form.get('slug')
+        slug = normalize_slug(request.form.get('slug') or title)
         content = request.form.get('content')
         excerpt = request.form.get('excerpt')
         language = request.form.get('language')
         status = request.form.get('status')
         publish_date = request.form.get('publish_date')
         author = request.form.get('author') if is_admin_user else current_author
-        enable_comments = 1 if request.form.get('enable_comments') else 0
-        # Checkbox to toggle comments for this post
-        enable_comments = 1 if request.form.get('enable_comments') else 0
-        enable_comments = 1 if request.form.get('enable_comments') else 0
-        enable_comments = 1 if request.form.get('enable_comments') else 0
-        enable_comments = 1 if request.form.get('enable_comments') else 0
         enable_comments = 1 if request.form.get('enable_comments') else 0
         
         # Validation
@@ -2567,7 +2589,7 @@ def admin_new_page():
 
     if request.method == 'POST':
         title = request.form.get('title')
-        slug = request.form.get('slug')
+        slug = normalize_slug(request.form.get('slug') or title)
         content = request.form.get('content')
         language = request.form.get('language')
         status = request.form.get('status')
@@ -2644,7 +2666,7 @@ def admin_edit_post(post_id):
     
     if request.method == 'POST':
         title = request.form.get('title')
-        slug = request.form.get('slug')
+        slug = normalize_slug(request.form.get('slug') or title)
         content = request.form.get('content')
         excerpt = request.form.get('excerpt')
         language = request.form.get('language')
@@ -2769,7 +2791,7 @@ def admin_edit_page(page_id):
 
     if request.method == 'POST':
         title = request.form.get('title')
-        slug = request.form.get('slug')
+        slug = normalize_slug(request.form.get('slug') or title)
         content = request.form.get('content')
         language = request.form.get('language')
         status = request.form.get('status')
