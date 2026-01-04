@@ -101,6 +101,7 @@
             <li><a href="{{ url_for('admin_pages') }}" {% if active_page == 'pages' %}class="active"{% endif %}><i class="fas fa-file"></i> Pages</a></li>
             <li><a href="{{ url_for('admin_new_page') }}" {% if active_page == 'new_page' %}class="active"{% endif %}><i class="fas fa-plus"></i> New Page</a></li>
             <li><a href="{{ url_for('admin_contact_messages') }}" {% if active_page == 'contact_messages' %}class="active"{% endif %}><i class="fas fa-inbox"></i> Messages {% if contact_unread_count %}<span class="badge bg-danger rounded-pill ms-1">{{ contact_unread_count }}</span>{% endif %}</a></li>
+            <li><a href="{{ url_for('admin_comments') }}" {% if active_page == 'comments' %}class="active"{% endif %}><i class="fas fa-comments"></i> Comments {% if comment_pending_count %}<span class="badge bg-warning text-dark rounded-pill ms-1">{{ comment_pending_count }}</span>{% endif %}</a></li>
             <li><a href="{{ url_for('admin_statistics') }}" {% if active_page == 'statistics' %}class="active"{% endif %}><i class="fas fa-chart-line"></i> Statistics</a></li>
             {% if session.get('is_admin') %}
             <li><a href="{{ url_for('admin_authors') }}" {% if active_page == 'authors' %}class="active"{% endif %}><i class="fas fa-users"></i> Authors</a></li>

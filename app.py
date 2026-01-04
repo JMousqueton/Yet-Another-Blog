@@ -304,6 +304,16 @@ def get_unread_contact_count():
         print(f"Error counting contact messages: {e}")
         return 0
 
+def get_pending_comment_count():
+    """Return count of comments awaiting approval."""
+    try:
+        db = get_db()
+        row = db.execute("SELECT COUNT(*) as c FROM comments WHERE status = 'pending'").fetchone()
+        return row['c'] if row else 0
+    except Exception as e:
+        print(f"Error counting pending comments: {e}")
+        return 0
+
 @app.context_processor
 def inject_global_settings():
     """Inject commonly used settings and translations into all templates."""
@@ -328,7 +338,8 @@ def inject_global_settings():
         't': translations,
         'lang': current_lang,  # Ensure lang is always available in templates
         'disclaimer_page': get_disclaimer_page(current_lang),
-        'contact_unread_count': get_unread_contact_count() if session.get('is_admin') else 0
+        'contact_unread_count': get_unread_contact_count() if session.get('is_admin') else 0,
+        'comment_pending_count': get_pending_comment_count() if session.get('is_admin') else 0
     }
 
 def get_enabled_languages():
@@ -510,6 +521,11 @@ def migrate_database():
             cursor.execute("ALTER TABLE posts ADD COLUMN share_token TEXT")
             conn.commit()
             print("✓ Added share_token column to posts table")
+
+        if 'enable_comments' not in posts_columns:
+            cursor.execute("ALTER TABLE posts ADD COLUMN enable_comments INTEGER DEFAULT 0")
+            conn.commit()
+            print("✓ Added enable_comments column to posts table")
         
         # Create settings table if it doesn't exist
         cursor.execute('''
@@ -578,6 +594,30 @@ def migrate_database():
             ON contact_messages(language, is_read, created_at DESC)
         ''')
 
+        # Comments table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER NOT NULL,
+                parent_id INTEGER,
+                author_name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
+                language TEXT NOT NULL CHECK(language IN ('en', 'fr', 'de')),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                FOREIGN KEY(parent_id) REFERENCES comments(id) ON DELETE CASCADE
+            )
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_comments_post_status
+            ON comments(post_id, status, created_at DESC)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_comments_parent
+            ON comments(parent_id)
+        ''')
+
         # Remove deprecated excerpt column by recreating table without it
         if 'excerpt' in pages_columns:
             cursor.execute('''
@@ -627,6 +667,27 @@ def calculate_reading_time(text):
     word_count = len(clean_text.split())
     reading_time = max(1, round(word_count / 200))
     return reading_time
+
+def clean_comment_content(text):
+    """Strip HTML/markdown-like syntax so only plain text and emojis remain."""
+    if not text:
+        return ''
+    # Remove HTML tags
+    cleaned = re.sub(r'<[^>]+>', '', text)
+    # Drop common markdown control characters
+    cleaned = re.sub(r'[`*_#~>|]', '', cleaned)
+    # Normalize whitespace and trim length
+    cleaned = re.sub(r'[\r\t]+', ' ', cleaned)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+    return cleaned.strip()
+
+def build_comment_tree(rows):
+    """Return a parent->children mapping for approved comments."""
+    tree = {}
+    for row in rows:
+        parent_id = row.get('parent_id')
+        tree.setdefault(parent_id, []).append(row)
+    return tree
 
 def get_db():
     """Get database connection."""
@@ -1003,6 +1064,21 @@ def post_detail(lang, slug):
     page_meta_description = post.get('excerpt') or meta_description
     meta_title = f"{post['title']} - {blog_title}" if blog_title else post['title']
     meta_image = url_for('static', filename=f"uploads/{post['featured_image']}", _external=True) if post.get('featured_image') else None
+
+    # Comments (only if globally enabled and post allows it)
+    comments_enabled_global = get_setting('enable_comments', 'off') == 'on'
+    allow_comments = bool(comments_enabled_global and post.get('enable_comments'))
+    approved_comments = []
+    comment_tree = {}
+    if allow_comments:
+        approved_comments = db.execute('''
+            SELECT id, post_id, parent_id, author_name, content, created_at
+            FROM comments
+            WHERE post_id = ? AND status = 'approved'
+            ORDER BY created_at ASC
+        ''', (post['id'],)).fetchall()
+        approved_comments = [dict(c) for c in approved_comments]
+        comment_tree = build_comment_tree(approved_comments)
     
     # Get author information if available
     author_info = None
@@ -1038,11 +1114,23 @@ def post_detail(lang, slug):
     except Exception as e:
         print(f"Error tracking view: {e}")
     
+    # Generate captcha for comment form if comments enabled
+    captcha_prompt = None
+    if allow_comments:
+        prompt, answer = generate_captcha(lang)
+        session['comment_captcha_prompt'] = prompt
+        session['comment_captcha_answer'] = answer
+        captcha_prompt = prompt
+    
     response = make_response(render_template('post.html', 
                          post=post, 
                          author=author_info,
                          prev_post=prev_post,
                          next_post=next_post,
+                         allow_comments=allow_comments,
+                         comment_tree=comment_tree,
+                         comments_count=len(approved_comments),
+                         captcha_prompt=captcha_prompt,
                          lang=lang, 
                          languages=get_enabled_languages(), 
                          meta_description=page_meta_description,
@@ -1060,6 +1148,93 @@ def post_detail(lang, slug):
         response.set_cookie('preferred_language', lang, max_age=365*24*60*60)  # 1 year
     
     return response
+
+
+@app.route('/<lang>/post/<slug>/comment', methods=['POST'])
+@limiter.limit('5 per minute')
+def submit_comment(lang, slug):
+    """Handle public comment submissions with moderation and threading."""
+    if lang not in LANGUAGES:
+        abort(404)
+
+    g.language = lang
+    translations = TRANSLATIONS.get(lang, TRANSLATIONS.get('en', {}))
+    comment_copy = translations.get('comments', {}) if isinstance(translations, dict) else {}
+
+    def msg(key, default):
+        return comment_copy.get(key, default) if isinstance(comment_copy, dict) else default
+
+    # Respect global setting
+    if get_setting('enable_comments', 'off') != 'on':
+        flash(msg('disabled', 'Comments are disabled for this blog.'), 'error')
+        return redirect(url_for('post_detail', lang=lang, slug=slug) + '#comments')
+
+    db = get_db()
+    now_iso = datetime.now().isoformat()
+    post = db.execute('''
+        SELECT * FROM posts 
+        WHERE language = ? AND slug = ? AND status = 'published' AND publish_date <= ?
+    ''', (lang, slug, now_iso)).fetchone()
+
+    if not post:
+        flash(msg('disabled', 'Comments are disabled for this post.'), 'error')
+        return redirect(url_for('post_detail', lang=lang, slug=slug))
+
+    post = dict(post)
+    if not post.get('enable_comments'):
+        flash(msg('disabled', 'Comments are disabled for this post.'), 'error')
+        return redirect(url_for('post_detail', lang=lang, slug=slug))
+
+    author_name = (request.form.get('author_name') or '').strip()
+    content_raw = request.form.get('content') or ''
+    parent_id_raw = request.form.get('parent_id')
+    captcha_input = request.form.get('captcha_answer', '').strip()
+    expected = session.get('comment_captcha_answer')
+
+    # Validate captcha first
+    if not (captcha_input.isdigit() and expected is not None and int(captcha_input) == expected):
+        flash(msg('error_captcha', 'Captcha is incorrect. Please try again.'), 'error')
+        return redirect(url_for('post_detail', lang=lang, slug=slug) + '#comments')
+
+    if not author_name or not content_raw.strip():
+        flash(msg('error_required', 'Name and comment are required.'), 'error')
+        return redirect(url_for('post_detail', lang=lang, slug=slug) + '#comments')
+
+    content_clean = clean_comment_content(content_raw)
+    if not content_clean:
+        flash(msg('error_required', 'Name and comment are required.'), 'error')
+        return redirect(url_for('post_detail', lang=lang, slug=slug) + '#comments')
+
+    # Enforce length limit
+    if len(content_clean) > 2000:
+        content_clean = content_clean[:2000]
+
+    # Validate parent comment belongs to this post and is approved (only reply to visible comments)
+    parent_id = None
+    if parent_id_raw:
+        try:
+            candidate_id = int(parent_id_raw)
+            parent = db.execute(
+                'SELECT id, status FROM comments WHERE id = ? AND post_id = ?',
+                (candidate_id, post['id'])
+            ).fetchone()
+            if parent and parent['status'] == 'approved':
+                parent_id = candidate_id
+        except ValueError:
+            parent_id = None
+
+    try:
+        db.execute('''
+            INSERT INTO comments (post_id, parent_id, author_name, content, status, language, created_at)
+            VALUES (?, ?, ?, ?, 'pending', ?, ?)
+        ''', (post['id'], parent_id, author_name, content_clean, lang, datetime.now().isoformat()))
+        db.commit()
+        flash(msg('submitted', 'Thank you! Your comment is awaiting moderation.'), 'success')
+    except Exception as e:
+        print(f"Error saving comment: {e}")
+        flash(msg('error_generic', 'Unable to submit your comment right now.'), 'error')
+
+    return redirect(url_for('post_detail', lang=lang, slug=slug) + '#comments')
 
 
 @app.route('/<lang>/post/<slug>/amp')
@@ -1948,6 +2123,63 @@ def admin_delete_contact_message(message_id):
     flash('Message deleted', 'success')
     return redirect(url_for('admin_contact_messages'))
 
+
+@app.route('/admin/comments')
+@login_required
+@admin_required
+def admin_comments():
+    """Moderate public comments."""
+    status = request.args.get('status', 'pending')
+    db = get_db()
+
+    query = '''
+        SELECT c.*, p.title as post_title, p.slug as post_slug, p.language as post_language
+        FROM comments c
+        JOIN posts p ON c.post_id = p.id
+    '''
+    params = []
+
+    if status != 'all':
+        query += ' WHERE c.status = ?'
+        params.append(status)
+
+    query += ' ORDER BY c.created_at DESC LIMIT 200'
+
+    comments = db.execute(query, params).fetchall()
+
+    return render_template('admin/comments.html', comments=comments, status=status)
+
+
+@app.route('/admin/comments/<int:comment_id>/approve', methods=['POST'])
+@login_required
+@admin_required
+def admin_approve_comment(comment_id):
+    db = get_db()
+    updated = db.execute("UPDATE comments SET status = 'approved' WHERE id = ?", (comment_id,)).rowcount
+    db.commit()
+    if updated:
+        flash('Comment approved and published', 'success')
+    else:
+        flash('Comment not found', 'error')
+
+    ref = request.referrer or url_for('admin_comments')
+    return redirect(ref)
+
+
+@app.route('/admin/comments/<int:comment_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_comment(comment_id):
+    db = get_db()
+    deleted = db.execute('DELETE FROM comments WHERE id = ?', (comment_id,)).rowcount
+    db.commit()
+    if deleted:
+        flash('Comment deleted', 'success')
+    else:
+        flash('Comment not found', 'error')
+    ref = request.referrer or url_for('admin_comments')
+    return redirect(ref)
+
 @app.route('/admin/posts/delete/<int:post_id>', methods=['POST'])
 @login_required
 def admin_delete_post(post_id):
@@ -2171,6 +2403,7 @@ def admin_new_post():
     db = get_db()
     is_admin_user = bool(session.get('is_admin'))
     current_author = session.get('user_name')
+    comments_global_on = get_setting('enable_comments', 'off') == 'on'
     
     # Get authors list (restricted for non-admins)
     if is_admin_user:
@@ -2183,10 +2416,18 @@ def admin_new_post():
         title = request.form.get('title')
         slug = request.form.get('slug')
         content = request.form.get('content')
+        excerpt = request.form.get('excerpt')
         language = request.form.get('language')
         status = request.form.get('status')
         publish_date = request.form.get('publish_date')
         author = request.form.get('author') if is_admin_user else current_author
+        enable_comments = 1 if request.form.get('enable_comments') else 0
+        # Checkbox to toggle comments for this post
+        enable_comments = 1 if request.form.get('enable_comments') else 0
+        enable_comments = 1 if request.form.get('enable_comments') else 0
+        enable_comments = 1 if request.form.get('enable_comments') else 0
+        enable_comments = 1 if request.form.get('enable_comments') else 0
+        enable_comments = 1 if request.form.get('enable_comments') else 0
         
         # Validation
         if not all([title, slug, content, language, status, publish_date, author]):
@@ -2195,7 +2436,9 @@ def admin_new_post():
                                  languages=LANGUAGES,
                                  authors=authors_list,
                                  current_user=session.get('user_name'),
-                                 form_data=request.form)
+                                 form_data=request.form,
+                                 form_enable_comments=enable_comments,
+                                 global_comments_on=comments_global_on)
         
         # Check if slug already exists for this language
         existing = db.execute('''
@@ -2228,9 +2471,9 @@ def admin_new_post():
                 featured = 1 if request.form.get('featured') else 0
                 db.execute('''
                     UPDATE posts SET 
-                        title = ?, slug = ?, content = ?, excerpt = ?, language = ?, status = ?, publish_date = ?, author = ?, featured_image = ?, featured = ?, updated_at = ?
+                        title = ?, slug = ?, content = ?, excerpt = ?, language = ?, status = ?, publish_date = ?, author = ?, featured_image = ?, featured = ?, enable_comments = ?, updated_at = ?
                     WHERE id = ?
-                ''', (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured, datetime.now().isoformat(), existing['id']))
+                ''', (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured, enable_comments, datetime.now().isoformat(), existing['id']))
                 db.commit()
                 flash(f'Post "{title}" updated successfully!', 'success')
                 return redirect(url_for('admin_edit_post', post_id=existing['id']))
@@ -2240,7 +2483,9 @@ def admin_new_post():
                                      languages=LANGUAGES,
                                      authors=authors_list,
                                      current_user=session.get('user_name'),
-                                     form_data=request.form)
+                                     form_data=request.form,
+                                     form_enable_comments=enable_comments,
+                                     global_comments_on=comments_global_on)
         
         # Insert post
         try:
@@ -2276,9 +2521,9 @@ def admin_new_post():
             featured = 1 if request.form.get('featured') else 0
             
             db.execute('''
-                INSERT INTO posts (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured,
+                INSERT INTO posts (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured, enable_comments, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured, enable_comments,
                   datetime.now().isoformat(), datetime.now().isoformat()))
             db.commit()
             
@@ -2290,14 +2535,19 @@ def admin_new_post():
                                  languages=LANGUAGES,
                                  authors=authors_list,
                                  current_user=session.get('user_name'),
-                                 form_data=request.form)
+                                 form_data=request.form,
+                                 form_enable_comments=enable_comments,
+                                 global_comments_on=comments_global_on)
     
     # GET request
+    form_enable_comments = 1 if comments_global_on else 0
     return render_template('admin/new_post.html', 
                          languages=LANGUAGES,
                          authors=authors_list,
                          current_user=session.get('user_name'),
-                         form_data={})
+                         form_data={},
+                         form_enable_comments=form_enable_comments,
+                         global_comments_on=comments_global_on)
 
 
 @app.route('/admin/pages/new', methods=['GET', 'POST'])
@@ -2374,6 +2624,8 @@ def admin_edit_post(post_id):
     if not post:
         flash('Post not found', 'error')
         return redirect(url_for('admin_posts'))
+    else:
+        post = dict(post)
     
     is_admin_user = bool(session.get('is_admin'))
     current_author = session.get('user_name')
@@ -2398,6 +2650,7 @@ def admin_edit_post(post_id):
         status = request.form.get('status')
         publish_date = request.form.get('publish_date')
         author = request.form.get('author') if is_admin_user else current_author
+        enable_comments = 1 if request.form.get('enable_comments') else 0
         
         # Validation
         if not all([title, slug, content, language, status, publish_date, author]):
@@ -2407,7 +2660,8 @@ def admin_edit_post(post_id):
                                  authors=authors_list,
                                  current_user=session.get('user_name'),
                                  post=post,
-                                 form_data=request.form)
+                                 form_data=request.form,
+                                 form_enable_comments=enable_comments)
         
         # Check if slug already exists for this language (excluding current post)
         existing = db.execute('''
@@ -2421,7 +2675,8 @@ def admin_edit_post(post_id):
                                  authors=authors_list,
                                  current_user=session.get('user_name'),
                                  post=post,
-                                 form_data=request.form)
+                                 form_data=request.form,
+                                 form_enable_comments=enable_comments)
         
         # Update post
         try:
@@ -2460,10 +2715,10 @@ def admin_edit_post(post_id):
                 UPDATE posts SET 
                     title = ?, slug = ?, content = ?, excerpt = ?, 
                     language = ?, status = ?, publish_date = ?, author = ?, 
-                    featured_image = ?, featured = ?, updated_at = ?
+                    featured_image = ?, featured = ?, enable_comments = ?, updated_at = ?
                 WHERE id = ?
             ''', (title, slug, content, excerpt, language, status, publish_date, author, 
-                  featured_image, featured, datetime.now().isoformat(), post_id))
+                  featured_image, featured, enable_comments, datetime.now().isoformat(), post_id))
             db.commit()
             
             flash(f'Post "{title}" updated successfully!', 'success')
@@ -2475,7 +2730,8 @@ def admin_edit_post(post_id):
                                  authors=authors_list,
                                  current_user=session.get('user_name'),
                                  post=post,
-                                 form_data=request.form)
+                                 form_data=request.form,
+                                 form_enable_comments=enable_comments)
     
     # GET request - populate form with post data
     return render_template('admin/edit_post.html', 
@@ -2483,7 +2739,8 @@ def admin_edit_post(post_id):
                          authors=authors_list,
                          current_user=session.get('user_name'),
                          post=post,
-                         form_data=post)
+                         form_data=post,
+                         form_enable_comments=post.get('enable_comments', 0))
 
 
 @app.route('/admin/pages/edit/<int:page_id>', methods=['GET', 'POST'])
@@ -2657,6 +2914,7 @@ def admin_authors():
     else:
         authors = db.execute('SELECT * FROM authors WHERE id = ?', (session.get('user_id'),)).fetchall()
     return render_template('admin/authors.html', authors=authors, is_admin_user=session.get('is_admin'))
+
 
 @app.route('/admin/authors/new', methods=['GET', 'POST'])
 @login_required

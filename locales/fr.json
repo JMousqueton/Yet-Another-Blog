@@ -68,6 +68,29 @@
     "captcha_placeholder": "Entrez le résultat en chiffres (ex : 10, 12)",
     "captcha_numbers": ["Zéro", "Un", "Deux", "Trois", "Quatre", "Cinq", "Six", "Sept", "Huit", "Neuf"]
   },
+  "comments": {
+    "title": "Commentaires",
+    "moderation_note": "Les commentaires sont relus avant publication.",
+    "name_label": "Nom",
+    "name_placeholder": "Votre nom",
+    "comment_label": "Commentaire",
+    "comment_placeholder": "Partagez vos idées (texte et emojis uniquement)",
+    "comment_hint": "Pas de HTML ni de markdown. Merci de rester courtois.",
+    "submit": "Publier le commentaire",
+    "cancel_reply": "Annuler la réponse",
+    "reply": "Répondre",
+    "no_comments": "Pas encore de commentaire. Soyez le premier à réagir !",
+    "disabled": "Les commentaires sont désactivés pour cet article.",
+    "replying_to": "Réponse à",
+    "error_required": "Le nom et le commentaire sont obligatoires.",
+    "error_generic": "Impossible d'envoyer votre commentaire pour le moment.",
+    "error_captcha": "Le captcha est incorrect. Merci de réessayer.",
+    "submitted": "Merci ! Votre commentaire est en attente de validation.",
+    "emoji_toggle": "Ajouter un émoji",
+    "emoji_hint": "Cliquez sur un symbole pour l'insérer",
+    "captcha_label": "Anti-spam :",
+    "captcha_placeholder": "Entrez le résultat en chiffres (ex : 10, 12)"
+  },
   "locations": {
     "home": "Accueil",
     "homepage": "Page d'accueil"

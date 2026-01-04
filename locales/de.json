@@ -63,11 +63,34 @@
     "success": "Nachricht gesendet! Wir melden uns bald.",
     "error_required": "Bitte Name, E-Mail und Nachricht ausfüllen.",
     "error_generic": "Fehler beim Senden der Nachricht.",
-    "error_captcha": "Captcha ist falsch. Bitte erneut versuchen.",
-    "captcha_label": "Anti-Spam:",
-    "captcha_placeholder": "Geben Sie das Ergebnis als Zahl ein (z. B. 10, 12)",
-    "captcha_numbers": ["Null", "Eins", "Zwei", "Drei", "Vier", "Fuenf", "Sechs", "Sieben", "Acht", "Neun"]
+      "error_captcha": "Captcha ist falsch. Bitte erneut versuchen.",
+      "captcha_label": "Anti-Spam:",
+      "captcha_placeholder": "Geben Sie das Ergebnis als Zahl ein (z. B. 10, 12)",
+      "captcha_numbers": ["Null", "Eins", "Zwei", "Drei", "Vier", "Fuenf", "Sechs", "Sieben", "Acht", "Neun"]
   },
+    "comments": {
+      "title": "Kommentare",
+      "moderation_note": "Kommentare werden vor der Veröffentlichung geprüft.",
+      "name_label": "Name",
+      "name_placeholder": "Ihr Name",
+      "comment_label": "Kommentar",
+      "comment_placeholder": "Teilen Sie Ihre Gedanken (nur Text und Emojis)",
+      "comment_hint": "Kein HTML oder Markdown. Bitte freundlich bleiben.",
+      "submit": "Kommentar senden",
+      "cancel_reply": "Antwort abbrechen",
+      "reply": "Antworten",
+      "no_comments": "Noch keine Kommentare. Seien Sie die Erste oder der Erste!",
+      "disabled": "Kommentare sind für diesen Beitrag deaktiviert.",
+      "replying_to": "Antwort auf",
+      "error_required": "Name und Kommentar sind erforderlich.",
+      "error_generic": "Ihr Kommentar kann derzeit nicht gesendet werden.",
+      "error_captcha": "Captcha ist falsch. Bitte erneut versuchen.",
+      "submitted": "Danke! Ihr Kommentar wartet auf Freigabe.",
+      "emoji_toggle": "Emoji hinzufügen",
+      "emoji_hint": "Klicken Sie ein Emoji zum Einfügen",
+      "captcha_label": "Anti-Spam:",
+      "captcha_placeholder": "Geben Sie das Ergebnis als Zahl ein (z. B. 10, 12)"
+    },
   "locations": {
     "home": "Startseite",
     "homepage": "Startseite"

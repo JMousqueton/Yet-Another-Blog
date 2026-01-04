@@ -57,9 +57,34 @@ def init_database():
             excerpt TEXT,
             featured_image TEXT,
             featured INTEGER DEFAULT 0,
+            enable_comments INTEGER DEFAULT 0,
             UNIQUE(slug, language),
             FOREIGN KEY(author) REFERENCES authors(name)
         )
+    ''')
+
+    # Comments table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER NOT NULL,
+            parent_id INTEGER,
+            author_name TEXT NOT NULL,
+            content TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
+            language TEXT NOT NULL CHECK(language IN ('en', 'fr', 'de')),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,
+            FOREIGN KEY(parent_id) REFERENCES comments(id) ON DELETE CASCADE
+        )
+    ''')
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_comments_post_status
+        ON comments(post_id, status, created_at DESC)
+    ''')
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_comments_parent
+        ON comments(parent_id)
     ''')
 
     # Create pages table

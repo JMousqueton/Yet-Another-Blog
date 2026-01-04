@@ -68,6 +68,29 @@
     "captcha_placeholder": "Enter the result in figures (e.g. 10, 12)",
     "captcha_numbers": ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
   },
+  "comments": {
+    "title": "Comments",
+    "moderation_note": "Comments are reviewed before publication.",
+    "name_label": "Name",
+    "name_placeholder": "Your name",
+    "comment_label": "Comment",
+    "comment_placeholder": "Share your thoughts (text and emojis only)",
+    "comment_hint": "No HTML or markdown. Keep it friendly.",
+    "submit": "Submit comment",
+    "cancel_reply": "Cancel reply",
+    "reply": "Reply",
+    "no_comments": "No comments yet. Be the first to share your thoughts!",
+    "disabled": "Comments are disabled for this post.",
+    "replying_to": "Replying to",
+    "error_required": "Name and comment are required.",
+    "error_generic": "Unable to submit your comment right now.",
+    "error_captcha": "Captcha is incorrect. Please try again.",
+    "submitted": "Thank you! Your comment is awaiting moderation.",
+    "emoji_toggle": "Add emoji",
+    "emoji_hint": "Click a symbol to insert",
+    "captcha_label": "Anti-spam:",
+    "captcha_placeholder": "Enter the result in figures (e.g. 10, 12)"
+  },
   "locations": {
     "home": "Home",
     "homepage": "Homepage"

@@ -180,6 +180,126 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Comments -->
+            <hr class="my-5" id="comments">
+            <section class="comments-section">
+                <div class="comment-header d-flex align-items-center mb-4">
+                        <h3 class="mb-0">
+                            <i class="fas fa-comments me-2"></i>{{ t.comments.title if t.comments.title else 'Comments' }}
+                        </h3>
+                    {% if comments_count %}
+                        <span class="badge bg-primary ms-2">{{ comments_count }}</span>
+                    {% endif %}
+                </div>
+
+                {% if allow_comments %}
+                        <div class="alert alert-info border-start border-4 border-info mb-4 shadow-sm" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle fa-lg me-3"></i>
+                                <span>{{ t.comments.moderation_note if t.comments.moderation_note else 'Comments are reviewed before publication.' }}</span>
+                            </div>
+                    </div>
+
+                        <div class="comment-form card border-0 shadow-sm mb-5">
+                            <div>
+                                <h5 class="mb-0"><i class="fas fa-pen me-2"></i>{{ t.comments.submit if t.comments.submit else 'Leave a Comment' }}</h5>
+                            </div>
+                            <div class="card-body p-4">
+                            <form method="POST" action="{{ url_for('submit_comment', lang=lang, slug=post.slug) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="parent_id" id="commentParentId" value="">
+
+                                <div class="mb-3">
+                                        <label class="form-label fw-semibold" for="author_name">
+                                            <i class="fas fa-user me-1"></i>{{ t.comments.name_label if t.comments.name_label else 'Name' }}
+                                        </label>
+                                        <input type="text" class="form-control form-control-lg" id="author_name" name="author_name" placeholder="{{ t.comments.name_placeholder if t.comments.name_placeholder else 'Your name' }}" required>
+                                </div>
+
+                                <div class="mb-3">
+                                        <label class="form-label fw-semibold" for="comment_content">
+                                            <i class="fas fa-comment-dots me-1"></i>{{ t.comments.comment_label if t.comments.comment_label else 'Comment' }}
+                                        </label>
+                                        <textarea class="form-control form-control-lg" id="comment_content" name="content" rows="5" maxlength="2000" placeholder="{{ t.comments.comment_placeholder if t.comments.comment_placeholder else 'Share your thoughts (text and emojis only)' }}" required></textarea>
+                                        <small class="text-muted"><i class="fas fa-lightbulb me-1"></i>{{ t.comments.comment_hint if t.comments.comment_hint else 'No HTML or markdown. Keep it friendly.' }}</small>
+
+                                    <div class="emoji-picker mt-2">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="emojiToggle" title="{{ t.comments.emoji_hint if t.comments.emoji_hint else 'Click a symbol to insert' }}">
+                                            <i class="fas fa-smile me-1"></i>{{ t.comments.emoji_toggle if t.comments.emoji_toggle else 'Add emoji' }}
+                                        </button>
+                                        <div class="emoji-panel d-none" id="emojiPanel" aria-label="Emoji picker">
+                                            {% set emojis = ['😀','😁','😂','🤣','😊','😍','😘','😎','🤔','🤗','🙌','👏','👍','👎','🙏','🚀','🎉','🔥','💡','✅','❌','🤯','😅','😢','😡','😴','💯','🥳','🤝','⚡'] %}
+                                            {% for e in emojis %}
+                                                <button type="button" class="emoji-btn" data-emoji="{{ e }}">{{ e }}</button>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                        <label class="form-label fw-semibold" for="captcha_answer">
+                                            <i class="fas fa-shield-alt me-1"></i>{{ t.comments.captcha_label if t.comments.captcha_label else 'Anti-spam check' }} 
+                                            <span class="text-primary fw-bold">{{ captcha_prompt }}</span>
+                                        </label>
+                                        <input type="text" class="form-control form-control-lg" id="captcha_answer" name="captcha_answer" placeholder="{{ t.comments.captcha_placeholder if t.comments.captcha_placeholder else 'Enter the result' }}" required autocomplete="off" style="max-width: 420px; font-size: 1.0rem; height: 3rem;">
+                                </div>
+
+                                <div class="d-flex align-items-center gap-2">
+                                        <button type="submit" class="btn btn-primary btn-lg px-4">
+                                        <i class="fas fa-paper-plane"></i> {{ t.comments.submit if t.comments.submit else 'Submit comment' }}
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="cancelReplyBtn">
+                                        {{ t.comments.cancel_reply if t.comments.cancel_reply else 'Cancel reply' }}
+                                    </button>
+                                </div>
+                                <div class="small text-muted mt-2 d-none" id="replyingTo"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    {% macro render_thread(parent_id=None, depth=0) %}
+                        {% if comment_tree.get(parent_id) %}
+                            <div class="comment-children depth-{{ depth }}">
+                            {% for comment in comment_tree.get(parent_id) %}
+                                    <div class="comment-card card border-0 shadow-sm mb-3 hover-lift" id="comment-{{ comment.id }}">
+                                        <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                                <div class="fw-bold text-primary">
+                                                    <i class="fas fa-user-circle me-1"></i>{{ comment.author_name }}
+                                                </div>
+                                                <div class="small text-muted">
+                                                    <i class="far fa-clock me-1"></i>{{ comment.created_at[:16] }}
+                                                </div>
+                                        </div>
+                                            <button class="btn btn-outline-primary btn-sm reply-link" data-comment-id="{{ comment.id }}" data-author="{{ comment.author_name }}">
+                                            <i class="fas fa-reply"></i> {{ t.comments.reply if t.comments.reply else 'Reply' }}
+                                        </button>
+                                    </div>
+                                    <div class="comment-body">{{ comment.content | e | replace('\n', '<br>') | safe }}</div>
+                                        </div>
+                                    {{ render_thread(comment.id, depth + 1) }}
+                                </div>
+                            {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endmacro %}
+
+                    {% if comment_tree %}
+                        {{ render_thread(None, 0) }}
+                    {% else %}
+                            <div class="alert alert-light border text-center py-4">
+                                <i class="fas fa-comment-slash fa-2x text-muted mb-2"></i>
+                                <p class="mb-0">{{ t.comments.no_comments if t.comments.no_comments else 'No comments yet. Be the first to share your thoughts!' }}</p>
+                            </div>
+                    {% endif %}
+                {% else %}
+                        <div class="alert alert-warning border-start border-4 border-warning">
+                            <i class="fas fa-ban me-2"></i>{{ t.comments.disabled if t.comments.disabled else 'Comments are disabled for this post.' }}
+                        </div>
+                {% endif %}
+            </section>
             
             <!-- Post Navigation -->
             {% if prev_post or next_post %}
@@ -377,6 +497,139 @@
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }
     }
+
+    /* Comments */
+    .comments-section {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+    }
+
+    .comment-header {
+        background: #f1f3f5;
+        border: 1px solid #d7dde3;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+    }
+
+    [data-theme="dark"] .comment-header {
+        background: #2f343a;
+        border-color: #3c434c;
+    }
+
+    .comment-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 12px !important;
+        background: #f2f4f6;
+        border: 1px solid #d7dde3;
+    }
+
+    [data-theme="dark"] .comment-card {
+        background: #2f343a;
+        border-color: #3c434c;
+    }
+
+    .comment-card.hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .comment-body {
+        margin-top: 0.5rem;
+        line-height: 1.6;
+        white-space: pre-line;
+        color: #495057;
+    }
+
+    .comment-children {
+        margin-left: 2rem;
+        margin-top: 1rem;
+        border-left: 3px solid #dee2e6;
+        padding-left: 1.5rem;
+    }
+
+    .reply-link {
+        transition: all 0.2s ease;
+        border-radius: 20px;
+    }
+
+    .reply-link:hover {
+        transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(var(--bs-primary-rgb), 0.3);
+    }
+
+    .comment-form .form-control-lg {
+        border-radius: 8px;
+        border: 2px solid #dee2e6;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .comment-form .form-control-lg:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.15);
+    }
+
+    .comment-form .card-header.bg-gradient {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #0056b3 100%);
+        border-radius: 0;
+    }
+
+    .comment-form .card {
+        border-radius: 12px !important;
+        overflow: hidden;
+    }
+
+    .comments-section h3 i {
+        color: inherit;
+    }
+
+    .alert.border-start {
+        border-left-width: 4px !important;
+    }
+
+    .badge.bg-primary {
+        font-size: 0.875rem;
+        padding: 0.35em 0.65em;
+    }
+
+    /* Emoji picker */
+    .emoji-picker {
+        position: relative;
+        display: inline-block;
+    }
+
+    .emoji-panel {
+        position: absolute;
+        z-index: 20;
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        max-width: 280px;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 0.25rem;
+    }
+
+    .emoji-btn {
+        border: none;
+        background: transparent;
+        font-size: 1.2rem;
+        line-height: 1.2;
+        padding: 0.35rem;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        border-radius: 8px;
+    }
+
+    .emoji-btn:hover {
+        transform: translateY(-1px) scale(1.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        background: #f8f9fa;
+    }
 </style>
 {% endblock %}
 
@@ -493,6 +746,87 @@ document.addEventListener('DOMContentLoaded', function() {
     loadReactions();
     if (hasVoted()) {
         disableButtons();
+    }
+
+    // Comment reply handling
+    const replyButtons = document.querySelectorAll('.reply-link');
+    const parentInput = document.getElementById('commentParentId');
+    const replyInfo = document.getElementById('replyingTo');
+    const cancelReplyBtn = document.getElementById('cancelReplyBtn');
+    const commentTextarea = document.getElementById('comment_content');
+    const emojiToggle = document.getElementById('emojiToggle');
+    const emojiPanel = document.getElementById('emojiPanel');
+
+    function resetReply() {
+        if (parentInput) {
+            parentInput.value = '';
+        }
+        if (replyInfo) {
+            replyInfo.classList.add('d-none');
+            replyInfo.textContent = '';
+        }
+        if (cancelReplyBtn) {
+            cancelReplyBtn.classList.add('d-none');
+        }
+    }
+
+    replyButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!parentInput) return;
+            const commentId = this.dataset.commentId;
+            const authorName = this.dataset.author || '';
+            parentInput.value = commentId;
+            if (replyInfo) {
+                replyInfo.textContent = `${'{{ t.comments.replying_to if t.comments.replying_to else "Replying to" }}'} ${authorName}`.trim();
+                replyInfo.classList.remove('d-none');
+            }
+            if (cancelReplyBtn) {
+                cancelReplyBtn.classList.remove('d-none');
+            }
+            if (commentTextarea) {
+                commentTextarea.focus();
+            }
+        });
+    });
+
+    if (cancelReplyBtn) {
+        cancelReplyBtn.addEventListener('click', function() {
+            resetReply();
+        });
+    }
+
+    // Emoji picker
+    function insertEmoji(emoji) {
+        if (!commentTextarea) return;
+        const start = commentTextarea.selectionStart || 0;
+        const end = commentTextarea.selectionEnd || 0;
+        const value = commentTextarea.value;
+        commentTextarea.value = value.slice(0, start) + emoji + value.slice(end);
+        const newPos = start + emoji.length;
+        commentTextarea.focus();
+        commentTextarea.setSelectionRange(newPos, newPos);
+    }
+
+    if (emojiToggle && emojiPanel) {
+        emojiToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            emojiPanel.classList.toggle('d-none');
+        });
+
+        emojiPanel.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                insertEmoji(btn.dataset.emoji || '');
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            const clickedToggle = emojiToggle.contains(e.target);
+            const clickedPanel = emojiPanel.contains(e.target);
+            if (!clickedToggle && !clickedPanel) {
+                emojiPanel.classList.add('d-none');
+            }
+        });
     }
 });
 </script>

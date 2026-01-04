@@ -1,0 +1,83 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'comments' %}
+
+{% block title %}Comments{% endblock %}
+{% block page_header %}<i class="fas fa-comments"></i> Comments{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <a href="{{ url_for('admin_comments', status='pending') }}" class="btn btn-sm {% if status == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Pending {% if comment_pending_count %}<span class="badge bg-light text-dark ms-1">{{ comment_pending_count }}</span>{% endif %}
+                </a>
+                <a href="{{ url_for('admin_comments', status='approved') }}" class="btn btn-sm {% if status == 'approved' %}btn-primary{% else %}btn-outline-primary{% endif %} ms-1">Approved</a>
+                <a href="{{ url_for('admin_comments', status='all') }}" class="btn btn-sm {% if status == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %} ms-1">All</a>
+            </div>
+            <small class="text-muted">Showing latest 200 comments</small>
+        </div>
+
+        {% if comments|length == 0 %}
+            <div class="alert alert-info mb-0">No comments found for this filter.</div>
+        {% else %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Author</th>
+                        <th>Comment</th>
+                        <th>Post</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comment in comments %}
+                    <tr>
+                        <td class="fw-semibold">{{ comment.author_name }}</td>
+                        <td style="max-width: 360px;">
+                            <div class="text-truncate" title="{{ comment.content }}">{{ comment.content }}</div>
+                            {% if comment.parent_id %}<div class="text-muted small">Reply to #{{ comment.parent_id }}</div>{% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ comment.post_title }}</div>
+                            <div class="small text-muted">/{{ comment.post_language }}/post/{{ comment.post_slug }}</div>
+                        </td>
+                        <td>
+                            {% if comment.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif comment.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small">{{ comment.created_at[:16] }}</td>
+                        <td class="text-end">
+                            {% if comment.status == 'pending' %}
+                            <form action="{{ url_for('admin_approve_comment', comment_id=comment.id) }}" method="POST" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-success" type="submit">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                            </form>
+                            {% endif %}
+                            <form action="{{ url_for('admin_delete_comment', comment_id=comment.id) }}" method="POST" class="d-inline ms-1" onsubmit="return confirm('Delete this comment?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            <a href="/{{ comment.post_language }}/post/{{ comment.post_slug }}#comment-{{ comment.id }}" class="btn btn-sm btn-outline-secondary ms-1" target="_blank" rel="noopener">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

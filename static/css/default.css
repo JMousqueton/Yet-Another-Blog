@@ -14,7 +14,7 @@
 [data-theme="dark"] {
     --primary-color: #1a252f;
     --secondary-color: #2980b9;
-    --text-color: #e0e0e0;
+    --text-color: #f2f4f7;
     --light-bg: #1a1a1a;
     --card-bg: #2d2d2d;
     --navbar-bg-start: #1a252f;
@@ -147,7 +147,12 @@ input:checked + .slider:before {
 }
 
 [data-theme="dark"] .text-muted {
-    color: #bbb !important;
+    color: #d0d6dc !important;
+}
+
+/* Comments: improve readability of comment messages in dark mode */
+[data-theme="dark"] .comment-body {
+    color: #e9edf3;
 }
 
 .post-meta i {

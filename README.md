@@ -50,6 +50,14 @@ A modern, feature-rich multilingual blog platform with an intuitive admin interf
 - **Post Navigation**: Previous/Next links on post pages
 - **Analytics**: Post view tracking and statistics dashboard
 
+#### Comments & Anti-spam
+- **Per-post comments** with global enable/disable and per-post toggle
+- **Moderation workflow**: all submissions queue as pending until approved
+- **Threaded replies** with inline reply affordance
+- **Emoji picker** for quick reactions while typing
+- **Human-friendly captcha**: localized number-word sum (same system as Contact form)
+- **Content sanitization**: text-only with emoji, limited length, no HTML/markdown
+
 ### 📊 Analytics & Statistics
 - **Traffic Sources**: Track referrers (Google, Yahoo, Facebook, Twitter/X, LinkedIn, Bluesky, Direct, Other)
 - **Reading Patterns**: Hourly view distribution charts
