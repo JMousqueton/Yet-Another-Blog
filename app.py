@@ -1223,6 +1223,31 @@ def post_detail(lang, slug):
     
     return response
 
+# Bulk approve/delete for comments
+@app.route('/admin/comments/bulk-action', methods=['POST'])
+@login_required
+@admin_required
+def admin_bulk_comment_action():
+    action = request.form.get('action')
+    comment_ids = request.form.getlist('comment_ids')
+    if not comment_ids:
+        flash('No comments selected.', 'warning')
+        return redirect(request.referrer or url_for('admin_comments'))
+    db = get_db()
+    placeholders = ','.join(['?'] * len(comment_ids))
+    if action == 'approve':
+        db.execute(f"UPDATE comments SET status = 'approved' WHERE id IN ({placeholders})", comment_ids)
+        db.commit()
+        flash(f"Approved {len(comment_ids)} comment(s).", 'success')
+    elif action == 'delete':
+        db.execute(f"DELETE FROM comments WHERE id IN ({placeholders})", comment_ids)
+        db.commit()
+        flash(f"Deleted {len(comment_ids)} comment(s).", 'success')
+    else:
+        flash('Invalid action.', 'danger')
+    return redirect(request.referrer or url_for('admin_comments'))
+
+
 
 @app.route('/<lang>/post/<slug>/comment', methods=['POST'])
 @limiter.limit('5 per minute')

@@ -21,62 +21,77 @@
         {% if comments|length == 0 %}
             <div class="alert alert-info mb-0">No comments found for this filter.</div>
         {% else %}
-        <div class="table-responsive">
-            <table class="table align-middle">
-                <thead>
-                    <tr>
-                        <th>Author</th>
-                        <th>Comment</th>
-                        <th>Post</th>
-                        <th>Status</th>
-                        <th>Submitted</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for comment in comments %}
-                    <tr>
-                        <td class="fw-semibold">{{ comment.author_name }}</td>
-                        <td style="max-width: 360px;">
-                            <div class="text-truncate" title="{{ comment.content }}">{{ comment.content }}</div>
-                            {% if comment.parent_id %}<div class="text-muted small">Reply to #{{ comment.parent_id }}</div>{% endif %}
-                        </td>
-                        <td>
-                            <div class="fw-semibold">{{ comment.post_title }}</div>
-                            <div class="small text-muted">/{{ comment.post_language }}/post/{{ comment.post_slug }}</div>
-                        </td>
-                        <td>
-                            {% if comment.status == 'pending' %}
-                                <span class="badge bg-warning text-dark">Pending</span>
-                            {% elif comment.status == 'approved' %}
-                                <span class="badge bg-success">Approved</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Rejected</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-muted small">{{ comment.created_at[:16] }}</td>
-                        <td class="text-end">
-                            {% if comment.status == 'pending' %}
-                            <form action="{{ url_for('admin_approve_comment', comment_id=comment.id) }}" method="POST" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button class="btn btn-sm btn-success" type="submit">
-                                    <i class="fas fa-check"></i> Approve
-                                </button>
-                            </form>
-                            {% endif %}
-                            <form action="{{ url_for('admin_delete_comment', comment_id=comment.id) }}" method="POST" class="d-inline ms-1" onsubmit="return confirm('Delete this comment?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button class="btn btn-sm btn-outline-danger" type="submit">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                            <a href="/{{ comment.post_language }}/post/{{ comment.post_slug }}#comment-{{ comment.id }}" class="btn btn-sm btn-outline-secondary ms-1" target="_blank" rel="noopener">View</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <form id="bulk-action-form" method="POST" action="{{ url_for('admin_bulk_comment_action') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-2">
+                <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Bulk Approve</button>
+                <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm ms-1" onclick="return confirm('Delete selected comments?');">Bulk Delete</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all"></th>
+                            <th>Author</th>
+                            <th>Comment</th>
+                            <th>Post</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comment in comments %}
+                        <tr>
+                            <td><input type="checkbox" name="comment_ids" value="{{ comment.id }}"></td>
+                            <td class="fw-semibold">{{ comment.author_name }}</td>
+                            <td style="max-width: 360px;">
+                                <div class="text-truncate" title="{{ comment.content }}">{{ comment.content }}</div>
+                                {% if comment.parent_id %}<div class="text-muted small">Reply to #{{ comment.parent_id }}</div>{% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ comment.post_title }}</div>
+                                <div class="small text-muted">/{{ comment.post_language }}/post/{{ comment.post_slug }}</div>
+                            </td>
+                            <td>
+                                {% if comment.status == 'pending' %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif comment.status == 'approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Rejected</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">{{ comment.created_at[:16] }}</td>
+                            <td class="text-end">
+                                {% if comment.status == 'pending' %}
+                                <form action="{{ url_for('admin_approve_comment', comment_id=comment.id) }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-sm btn-success" type="submit">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <form action="{{ url_for('admin_delete_comment', comment_id=comment.id) }}" method="POST" class="d-inline ms-1" onsubmit="return confirm('Delete this comment?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                <a href="/{{ comment.post_language }}/post/{{ comment.post_slug }}#comment-{{ comment.id }}" class="btn btn-sm btn-outline-secondary ms-1" target="_blank" rel="noopener">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+        <script>
+        document.getElementById('select-all').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('input[name="comment_ids"]');
+            for (const cb of checkboxes) { cb.checked = this.checked; }
+        });
+        </script>
         {% endif %}
     </div>
 </div>
