@@ -917,19 +917,20 @@ def purge_old_views():
         print(f"❌ Error purging old views: {e}")
 
 # Run database migrations on app startup
-try:
-    migrate_database()
-    # Add featured column if it doesn't exist
-    db = get_db()
+with app.app_context():
     try:
-        db.execute("ALTER TABLE posts ADD COLUMN featured INTEGER DEFAULT 0")
-        db.commit()
-        print("Added 'featured' column to posts table")
-    except sqlite3.OperationalError:
-        # Column already exists
-        pass
-except Exception as e:
-    print(f"Migration error: {e}")
+        migrate_database()
+        # Add featured column if it doesn't exist
+        db = get_db()
+        try:
+            db.execute("ALTER TABLE posts ADD COLUMN featured INTEGER DEFAULT 0")
+            db.commit()
+            print("Added 'featured' column to posts table")
+        except sqlite3.OperationalError:
+            # Column already exists
+            pass
+    except Exception as e:
+        print(f"Migration error: {e}")
 
 @app.before_request
 def before_request():
