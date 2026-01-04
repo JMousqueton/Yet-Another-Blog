@@ -61,11 +61,35 @@ def init_database():
             FOREIGN KEY(author) REFERENCES authors(name)
         )
     ''')
+
+    # Create pages table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            slug TEXT NOT NULL,
+            content TEXT NOT NULL,
+            language TEXT NOT NULL CHECK(language IN ('en', 'fr', 'de')),
+            status TEXT NOT NULL CHECK(status IN ('draft', 'published', 'scheduled')),
+            publish_date DATETIME NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            author TEXT,
+            share_token TEXT,
+            UNIQUE(slug, language),
+            FOREIGN KEY(author) REFERENCES authors(name)
+        )
+    ''')
     
     # Create index for better performance
     cursor.execute('''
         CREATE INDEX IF NOT EXISTS idx_language_status 
         ON posts(language, status, publish_date)
+    ''')
+
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_pages_language_status 
+        ON pages(language, status, publish_date)
     ''')
     
     # Create post_views table for statistics tracking
@@ -175,6 +199,51 @@ def init_database():
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (post['title'], post['slug'], post['content'], post['language'], 
               post['status'], post['publish_date'], post['author'], post['excerpt']))
+
+    # Add sample pages
+    sample_pages = [
+        {
+            'title': 'About',
+            'slug': 'about',
+            'content': '''<h2>About This Site</h2>
+<p>This page is managed like a post but does not show author details or navigation.</p>
+<p>Use it for static content such as About, Contact, or Legal mentions.</p>''',
+            'language': 'en',
+            'status': 'published',
+            'publish_date': datetime.now().isoformat(),
+            'author': 'Blog Admin'
+        },
+        {
+            'title': 'À propos',
+            'slug': 'a-propos',
+            'content': '''<h2>À propos</h2>
+<p>Cette page est gérée comme un article mais n'affiche pas d'auteur ni de navigation.</p>
+<p>Utilisez-la pour du contenu statique comme À propos, Contact ou Mentions légales.</p>''',
+            'language': 'fr',
+            'status': 'published',
+            'publish_date': datetime.now().isoformat(),
+            'author': 'Blog Admin'
+        },
+        {
+            'title': 'Über uns',
+            'slug': 'uber-uns',
+            'content': '''<h2>Über uns</h2>
+<p>Diese Seite wird wie ein Beitrag verwaltet, zeigt aber keine Autorendaten oder Navigation.</p>
+<p>Nutzen Sie sie für statische Inhalte wie Über uns, Kontakt oder Impressum.</p>''',
+            'language': 'de',
+            'status': 'published',
+            'publish_date': datetime.now().isoformat(),
+            'author': 'Blog Admin'
+        }
+    ]
+
+    for page in sample_pages:
+        cursor.execute('''
+            INSERT OR IGNORE INTO pages 
+            (title, slug, content, language, status, publish_date, author)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (page['title'], page['slug'], page['content'], page['language'], 
+              page['status'], page['publish_date'], page['author']))
     
     conn.commit()
     conn.close()

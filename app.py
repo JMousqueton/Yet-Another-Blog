@@ -474,6 +474,78 @@ def migrate_database():
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        # Create pages table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                slug TEXT NOT NULL,
+                content TEXT NOT NULL,
+                language TEXT NOT NULL CHECK(language IN ('en', 'fr', 'de')),
+                status TEXT NOT NULL CHECK(status IN ('draft', 'published', 'scheduled')),
+                publish_date DATETIME NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                author TEXT,
+                share_token TEXT,
+                UNIQUE(slug, language),
+                FOREIGN KEY(author) REFERENCES authors(name)
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_pages_language_status 
+            ON pages(language, status, publish_date)
+        ''')
+        conn.commit()
+
+        # Add/remove columns in pages table if it already existed
+        cursor.execute("PRAGMA table_info(pages)")
+        pages_columns = [row[1] for row in cursor.fetchall()]
+
+        if 'share_token' not in pages_columns:
+            cursor.execute("ALTER TABLE pages ADD COLUMN share_token TEXT")
+            conn.commit()
+            print("✓ Added share_token column to pages table")
+
+        if 'author' not in pages_columns:
+            cursor.execute("ALTER TABLE pages ADD COLUMN author TEXT")
+            conn.commit()
+            print("✓ Added author column to pages table")
+
+        # Remove deprecated excerpt column by recreating table without it
+        if 'excerpt' in pages_columns:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS pages_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    slug TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    language TEXT NOT NULL CHECK(language IN ('en', 'fr', 'de')),
+                    status TEXT NOT NULL CHECK(status IN ('draft', 'published', 'scheduled')),
+                    publish_date DATETIME NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    author TEXT,
+                    share_token TEXT,
+                    UNIQUE(slug, language),
+                    FOREIGN KEY(author) REFERENCES authors(name)
+                )
+            ''')
+
+            cursor.execute('''
+                INSERT INTO pages_new (id, title, slug, content, language, status, publish_date, created_at, updated_at, author, share_token)
+                SELECT id, title, slug, content, language, status, publish_date, created_at, updated_at, author, share_token
+                FROM pages
+            ''')
+
+            cursor.execute('DROP TABLE pages')
+            cursor.execute('ALTER TABLE pages_new RENAME TO pages')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_pages_language_status ON pages(language, status, publish_date)')
+            conn.commit()
+            print("✓ Removed deprecated excerpt column from pages table")
+
         conn.commit()
         
         conn.close()
@@ -589,13 +661,30 @@ def update_scheduled_posts():
             WHERE status = 'scheduled' AND datetime(publish_date) <= datetime('now')
         ''', (now,))
         
-        updated = cursor.rowcount
+        posts_updated = cursor.rowcount
+
+        # Publish scheduled pages
+        cursor.execute('''
+            SELECT id, title, slug, language
+            FROM pages
+            WHERE status = 'scheduled' AND datetime(publish_date) <= datetime('now')
+        ''')
+        pages_to_publish = cursor.fetchall()
+
+        cursor.execute('''
+            UPDATE pages
+            SET status = 'published', updated_at = ?
+            WHERE status = 'scheduled' AND datetime(publish_date) <= datetime('now')
+        ''', (now,))
+
+        pages_updated = cursor.rowcount
+
         conn.commit()
         conn.close()
         
         # Send email notifications to authors
-        if updated > 0:
-            print(f"✅ Updated {updated} scheduled post(s) to published at {now}")
+        if posts_updated > 0:
+            print(f"✅ Updated {posts_updated} scheduled post(s) to published at {now}")
             
             # Get base URL from environment or use default
             base_url = os.getenv('BASE_URL', 'http://localhost:5001')
@@ -621,6 +710,11 @@ def update_scheduled_posts():
                     send_email(post['email'], subject, body)
         else:
             print(f"⏰ No scheduled posts to publish at {now}")
+
+        if pages_updated > 0:
+            print(f"✅ Updated {pages_updated} scheduled page(s) to published at {now}")
+        else:
+            print(f"⏰ No scheduled pages to publish at {now}")
     except Exception as e:
         print(f"❌ Error in scheduled post publishing: {e}")
         import traceback
@@ -944,6 +1038,92 @@ def post_detail_amp(lang, slug):
                          lang=lang,
                          blog_title=blog_title)
 
+
+@app.route('/<lang>/page/<slug>')
+def page_detail(lang, slug):
+    """Individual page (no author or navigation)."""
+    if lang not in LANGUAGES:
+        return redirect(url_for('index', lang=DEFAULT_LANGUAGE))
+    
+    enabled_languages = get_enabled_languages()
+    if lang not in enabled_languages:
+        abort(404)
+    
+    has_language_cookie = request.cookies.get('preferred_language')
+    g.language = lang
+    meta_description = get_setting(f'blog_description_{lang}', get_setting('blog_description_en', ''))
+    blog_title = get_setting(f'blog_title_{lang}', get_setting('blog_title', 'My Blog'))
+    blog_subtitle = get_setting(f'blog_subtitle_{lang}', get_setting('blog_subtitle_en', ''))
+    meta_url = request.url
+    template_css = get_setting('template_css', 'default.css')
+    db = get_db()
+    
+    now = datetime.now().isoformat()
+    page = db.execute('''
+        SELECT * FROM pages 
+        WHERE language = ? AND slug = ? AND status = 'published' AND publish_date <= ?
+    ''', (lang, slug, now)).fetchone()
+    
+    if not page:
+        return render_template('404.html', lang=lang, languages=get_enabled_languages(), meta_description=meta_description, meta_title=blog_title, meta_url=meta_url, meta_type='website'), 404
+
+    page = dict(page)
+    page['reading_time'] = calculate_reading_time(page['content'])
+    page_meta_description = (page.get('content')[:160] if page.get('content') else meta_description)
+    meta_title = f"{page['title']} - {blog_title}" if blog_title else page['title']
+    meta_image = url_for('static', filename='default-og-image.jpg', _external=True) if os.path.exists(os.path.join('static', 'default-og-image.jpg')) else None
+    
+    response = make_response(render_template('page.html',
+                         page=page,
+                         lang=lang,
+                         languages=get_enabled_languages(),
+                         meta_description=page_meta_description,
+                         meta_keywords=get_setting(f'meta_keywords_{lang}', ''),
+                         meta_title=meta_title,
+                         meta_url=meta_url,
+                         meta_image=meta_image,
+                         meta_type='website',
+                         template_css=template_css,
+                         blog_title=blog_title,
+                         blog_subtitle=blog_subtitle))
+
+    if not has_language_cookie:
+        response.set_cookie('preferred_language', lang, max_age=365*24*60*60)
+    
+    return response
+
+
+@app.route('/<lang>/page/<slug>/amp')
+def page_detail_amp(lang, slug):
+    """AMP version of page."""
+    if lang not in LANGUAGES:
+        return redirect(url_for('index', lang=DEFAULT_LANGUAGE))
+    
+    enabled_languages = get_enabled_languages()
+    if lang not in enabled_languages:
+        abort(404)
+    
+    g.language = lang
+    blog_title = get_setting(f'blog_title_{lang}', get_setting('blog_title', 'My Blog'))
+    db = get_db()
+    
+    now = datetime.now().isoformat()
+    page = db.execute('''
+        SELECT * FROM pages 
+        WHERE language = ? AND slug = ? AND status = 'published' AND publish_date <= ?
+    ''', (lang, slug, now)).fetchone()
+    
+    if not page:
+        abort(404)
+
+    page = dict(page)
+    page['reading_time'] = calculate_reading_time(page['content'])
+    
+    return render_template('page_amp.html',
+                         page=page,
+                         lang=lang,
+                         blog_title=blog_title)
+
 @app.route('/rss')
 @app.route('/rss/')
 def rss_feed_default():
@@ -1154,6 +1334,23 @@ def sitemap():
                 'updated': dict(post)['updated_at'],
                 'changefreq': 'monthly',
                 'priority': '0.9'
+            })
+
+    # Add pages
+    pages = db.execute('''
+        SELECT slug, language, updated_at FROM pages 
+        WHERE status = 'published' AND publish_date <= ?
+        ORDER BY updated_at DESC
+    ''', (now,)).fetchall()
+
+    for page in pages:
+        page_lang = dict(page)['language']
+        if page_lang in enabled_languages:
+            sitemap_urls.append({
+                'url': f'https://{request.host}/{page_lang}/page/{dict(page)["slug"]}',
+                'updated': dict(page)['updated_at'],
+                'changefreq': 'yearly',
+                'priority': '0.7'
             })
     
     # Generate XML
@@ -1466,6 +1663,56 @@ def admin_posts():
                          languages=LANGUAGES,
                          is_admin_user=is_admin_user)
 
+
+@app.route('/admin/pages')
+@login_required
+def admin_pages():
+    """Admin pages list page."""
+    db = get_db()
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+
+    status_filter = request.args.get('status', 'all')
+    language_filter = request.args.get('language', 'all')
+    search_query = request.args.get('q', '').strip()
+
+    query = 'SELECT * FROM pages WHERE 1=1'
+    params = []
+
+    if not is_admin_user:
+        query += ' AND author = ?'
+        params.append(current_author)
+
+    if status_filter != 'all':
+        query += ' AND status = ?'
+        params.append(status_filter)
+
+    if language_filter != 'all':
+        query += ' AND language = ?'
+        params.append(language_filter)
+
+    if search_query:
+        query += ' AND (title LIKE ? OR content LIKE ?)'
+        params.extend([f'%{search_query}%', f'%{search_query}%'])
+
+    query += ' ORDER BY created_at DESC'
+
+    pages = db.execute(query, params).fetchall()
+
+    pages_with_reading_time = []
+    for page in pages:
+        page_dict = dict(page)
+        page_dict['reading_time'] = calculate_reading_time(page_dict['content'])
+        pages_with_reading_time.append(page_dict)
+
+    return render_template('admin/pages.html',
+                         pages=pages_with_reading_time,
+                         status_filter=status_filter,
+                         language_filter=language_filter,
+                         search_query=search_query,
+                         languages=LANGUAGES,
+                         is_admin_user=is_admin_user)
+
 @app.route('/admin/posts/delete/<int:post_id>', methods=['POST'])
 @login_required
 def admin_delete_post(post_id):
@@ -1486,6 +1733,29 @@ def admin_delete_post(post_id):
     flash(f'Post "{post["title"]}" deleted successfully!', 'success')
     
     return redirect(url_for('admin_posts'))
+
+
+@app.route('/admin/pages/delete/<int:page_id>', methods=['POST'])
+@login_required
+def admin_delete_page(page_id):
+    """Delete a page."""
+    db = get_db()
+
+    page = db.execute('SELECT * FROM pages WHERE id = ?', (page_id,)).fetchone()
+    if not page:
+        flash('Page not found', 'error')
+        return redirect(url_for('admin_pages'))
+
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+    if not is_admin_user and page['author'] != current_author:
+        abort(403)
+
+    db.execute('DELETE FROM pages WHERE id = ?', (page_id,))
+    db.commit()
+    flash(f'Page "{page["title"]}" deleted successfully!', 'success')
+
+    return redirect(url_for('admin_pages'))
 
 @app.route('/admin/posts/<int:post_id>/generate-share-link', methods=['POST'])
 @login_required
@@ -1513,6 +1783,31 @@ def admin_generate_share_link(post_id):
     
     # Return the preview URL - use absolute URL
     preview_url = request.url_root.rstrip('/') + f'/preview/{share_token}'
+    return jsonify({'success': True, 'preview_url': preview_url})
+
+
+@app.route('/admin/pages/<int:page_id>/generate-share-link', methods=['POST'])
+@login_required
+def admin_generate_page_share_link(page_id):
+    """Generate a shareable preview link for a draft page."""
+    db = get_db()
+
+    page = db.execute('SELECT * FROM pages WHERE id = ?', (page_id,)).fetchone()
+    if not page:
+        return jsonify({'success': False, 'error': 'Page not found'}), 404
+
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+    if not is_admin_user and page['author'] != current_author:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    import secrets
+    share_token = secrets.token_urlsafe(32)
+
+    db.execute('UPDATE pages SET share_token = ? WHERE id = ?', (share_token, page_id))
+    db.commit()
+
+    preview_url = request.url_root.rstrip('/') + f'/preview/page/{share_token}'
     return jsonify({'success': True, 'preview_url': preview_url})
 
 @app.route('/preview/<token>')
@@ -1556,6 +1851,37 @@ def preview_post(token):
                          languages=LANGUAGES,
                          is_preview=True)
 
+
+@app.route('/preview/page/<token>')
+def preview_page(token):
+    """Display a page preview using share token."""
+    if not token or len(token) < 10:
+        abort(404)
+
+    db = get_db()
+
+    page = db.execute('SELECT * FROM pages WHERE share_token = ?', (token,)).fetchone()
+    if not page:
+        abort(404)
+
+    template_css = get_setting('template_css', 'default.css')
+    blog_title = get_setting(f'blog_title_{page["language"]}', get_setting('blog_title', 'My Blog'))
+    blog_subtitle = get_setting(f'blog_subtitle_{page["language"]}', get_setting('blog_subtitle_en', ''))
+
+    g.language = page['language']
+    page = dict(page)
+    page['reading_time'] = calculate_reading_time(page['content'])
+
+    return render_template('page_preview.html',
+                         page=page,
+                         lang=page['language'],
+                         meta_description=(page['content'][:160] if page['content'] else ''),
+                         blog_title=blog_title,
+                         blog_subtitle=blog_subtitle,
+                         template_css=template_css,
+                         languages=LANGUAGES,
+                         is_preview=True)
+
 @app.route('/admin/posts/<int:post_id>/publish-now', methods=['POST'])
 @login_required
 def admin_publish_now(post_id):
@@ -1580,6 +1906,29 @@ def admin_publish_now(post_id):
     
     return jsonify({'success': True, 'message': 'Post published successfully'})
 
+
+@app.route('/admin/pages/<int:page_id>/publish-now', methods=['POST'])
+@login_required
+def admin_publish_page_now(page_id):
+    """Publish a draft page immediately."""
+    db = get_db()
+
+    page = db.execute('SELECT * FROM pages WHERE id = ?', (page_id,)).fetchone()
+    if not page:
+        return jsonify({'success': False, 'error': 'Page not found'}), 404
+
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+    if not is_admin_user and page['author'] != current_author:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    current_datetime = datetime.now().isoformat()
+    db.execute('UPDATE pages SET status = ?, publish_date = ? WHERE id = ?',
+               ('published', current_datetime, page_id))
+    db.commit()
+
+    return jsonify({'success': True, 'message': 'Page published successfully'})
+
 @app.route('/admin/posts/new', methods=['GET', 'POST'])
 @login_required
 def admin_new_post():
@@ -1599,7 +1948,6 @@ def admin_new_post():
         title = request.form.get('title')
         slug = request.form.get('slug')
         content = request.form.get('content')
-        excerpt = request.form.get('excerpt')
         language = request.form.get('language')
         status = request.form.get('status')
         publish_date = request.form.get('publish_date')
@@ -1711,6 +2059,71 @@ def admin_new_post():
     
     # GET request
     return render_template('admin/new_post.html', 
+                         languages=LANGUAGES,
+                         authors=authors_list,
+                         current_user=session.get('user_name'),
+                         form_data={})
+
+
+@app.route('/admin/pages/new', methods=['GET', 'POST'])
+@login_required
+def admin_new_page():
+    """Create a new page."""
+    db = get_db()
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+
+    if is_admin_user:
+        authors = db.execute('SELECT name FROM authors ORDER BY name').fetchall()
+        authors_list = [dict(a)['name'] for a in authors]
+    else:
+        authors_list = [current_author] if current_author else []
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        slug = request.form.get('slug')
+        content = request.form.get('content')
+        language = request.form.get('language')
+        status = request.form.get('status')
+        publish_date = request.form.get('publish_date')
+        author = request.form.get('author') if is_admin_user else current_author
+
+        if not all([title, slug, content, language, status, publish_date, author]):
+            flash('Please fill in all required fields', 'error')
+            return render_template('admin/new_page.html',
+                                 languages=LANGUAGES,
+                                 authors=authors_list,
+                                 current_user=session.get('user_name'),
+                                 form_data=request.form)
+
+        existing = db.execute('SELECT * FROM pages WHERE slug = ? AND language = ?', (slug, language)).fetchone()
+        if existing:
+            flash(f'A page with slug "{slug}" already exists in {language.upper()}', 'error')
+            return render_template('admin/new_page.html',
+                                 languages=LANGUAGES,
+                                 authors=authors_list,
+                                 current_user=session.get('user_name'),
+                                 form_data=request.form)
+
+        try:
+            db.execute('''
+                INSERT INTO pages (title, slug, content, language, status, publish_date, author, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (title, slug, content, language, status, publish_date, author,
+                  datetime.now().isoformat(), datetime.now().isoformat()))
+            db.commit()
+
+            flash(f'Page "{title}" created successfully!', 'success')
+            return redirect(url_for('admin_pages'))
+        except Exception as e:
+            flash(f'Error creating page: {str(e)}', 'error')
+            return render_template('admin/new_page.html',
+                                 languages=LANGUAGES,
+                                 authors=authors_list,
+                                 current_user=session.get('user_name'),
+                                 form_data=request.form)
+
+    return render_template('admin/new_page.html',
                          languages=LANGUAGES,
                          authors=authors_list,
                          current_user=session.get('user_name'),
@@ -1836,6 +2249,87 @@ def admin_edit_post(post_id):
                          current_user=session.get('user_name'),
                          post=post,
                          form_data=post)
+
+
+@app.route('/admin/pages/edit/<int:page_id>', methods=['GET', 'POST'])
+@login_required
+def admin_edit_page(page_id):
+    """Edit an existing page."""
+    db = get_db()
+    page = db.execute('SELECT * FROM pages WHERE id = ?', (page_id,)).fetchone()
+
+    if not page:
+        flash('Page not found', 'error')
+        return redirect(url_for('admin_pages'))
+
+    is_admin_user = bool(session.get('is_admin'))
+    current_author = session.get('user_name')
+
+    if not is_admin_user and page['author'] != current_author:
+        abort(403)
+
+    if is_admin_user:
+        authors = db.execute('SELECT name FROM authors ORDER BY name').fetchall()
+        authors_list = [dict(a)['name'] for a in authors]
+    else:
+        authors_list = [current_author] if current_author else []
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        slug = request.form.get('slug')
+        content = request.form.get('content')
+        language = request.form.get('language')
+        status = request.form.get('status')
+        publish_date = request.form.get('publish_date')
+        author = request.form.get('author') if is_admin_user else current_author
+
+        if not all([title, slug, content, language, status, publish_date, author]):
+            flash('Please fill in all required fields', 'error')
+            return render_template('admin/edit_page.html',
+                                 languages=LANGUAGES,
+                                 authors=authors_list,
+                                 current_user=session.get('user_name'),
+                                 page=page,
+                                 form_data=request.form)
+
+        existing = db.execute('SELECT id FROM pages WHERE slug = ? AND language = ? AND id != ?', (slug, language, page_id)).fetchone()
+        if existing:
+            flash(f'A page with slug "{slug}" already exists in {language.upper()}', 'error')
+            return render_template('admin/edit_page.html',
+                                 languages=LANGUAGES,
+                                 authors=authors_list,
+                                 current_user=session.get('user_name'),
+                                 page=page,
+                                 form_data=request.form)
+
+        try:
+            db.execute('''
+                UPDATE pages SET 
+                    title = ?, slug = ?, content = ?, 
+                    language = ?, status = ?, publish_date = ?, author = ?, 
+                    updated_at = ?
+                WHERE id = ?
+            ''', (title, slug, content, language, status, publish_date, author,
+                  datetime.now().isoformat(), page_id))
+            db.commit()
+
+            flash(f'Page "{title}" updated successfully!', 'success')
+            return redirect(url_for('admin_pages'))
+        except Exception as e:
+            flash(f'Error updating page: {str(e)}', 'error')
+            return render_template('admin/edit_page.html',
+                                 languages=LANGUAGES,
+                                 authors=authors_list,
+                                 current_user=session.get('user_name'),
+                                 page=page,
+                                 form_data=request.form)
+
+    return render_template('admin/edit_page.html',
+                         languages=LANGUAGES,
+                         authors=authors_list,
+                         current_user=session.get('user_name'),
+                         page=page,
+                         form_data=page)
 
 @app.route('/admin/media', methods=['GET', 'POST'])
 @login_required

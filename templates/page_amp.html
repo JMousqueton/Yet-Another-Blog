@@ -1,0 +1,174 @@
+<!doctype html>
+<html ⚡ lang="{{ lang }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+    
+    <title>{{ page.title }} - {{ blog_title }}</title>
+    
+    <link rel="canonical" href="{{ request.url_root }}{{ lang }}/page/{{ page.slug }}">
+    
+    <style amp-boilerplate>body{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}@-webkit-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-moz-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-ms-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-o-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}</style><noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript>
+    
+    <script async src="https://cdn.ampproject.org/v0.js"></script>
+    <script async custom-element="amp-social-share" src="https://cdn.ampproject.org/v0/amp-social-share-0.1.js"></script>
+    
+    <meta name="description" content="{{ page.content|striptags|truncate(160) }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url_root }}{{ lang }}/page/{{ page.slug }}">
+    <meta property="og:title" content="{{ page.title }}">
+    <meta property="og:description" content="{{ page.content|striptags|truncate(160) }}">
+    <meta property="og:locale" content="{{ lang }}_{{ lang.upper() }}">
+    <meta property="article:published_time" content="{{ page.publish_date }}">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ page.title }}">
+    <meta name="twitter:description" content="{{ page.content|striptags|truncate(160) }}">
+
+    <style amp-custom>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+        }
+        header {
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .site-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #0066cc;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        h1 {
+            font-size: 2.3rem;
+            font-weight: bold;
+            line-height: 1.2;
+            margin: 20px 0;
+            color: #212529;
+        }
+        .post-meta {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin: 15px 0;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .post-meta span { margin-right: 15px; }
+        .post-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin: 30px 0;
+        }
+        .post-content h2 { font-size: 1.6rem; margin: 25px 0 12px; }
+        .post-content h3 { font-size: 1.3rem; margin: 20px 0 10px; }
+        .post-content p { margin: 15px 0; }
+        .post-content a { color: #0066cc; text-decoration: underline; }
+        .post-content ul, .post-content ol { margin: 15px 0; padding-left: 25px; }
+        .post-content li { margin: 8px 0; }
+        .post-content blockquote {
+            border-left: 4px solid #0066cc;
+            padding-left: 20px;
+            margin: 20px 0;
+            font-style: italic;
+            color: #495057;
+        }
+        .post-content pre {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            font-size: 0.9rem;
+        }
+        .post-content code {
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: "Courier New", monospace;
+            font-size: 0.9em;
+        }
+        .social-share {
+            display: flex;
+            gap: 10px;
+            margin: 30px 0;
+            padding: 15px 0;
+            border-top: 1px solid #e9ecef;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .amp-badge {
+            text-align: center;
+            padding: 20px;
+            margin: 30px 0;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        footer a { color: #0066cc; text-decoration: none; }
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .post-content { font-size: 1rem; }
+            .container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="{{ request.url_root }}{{ lang }}/" class="site-title">{{ blog_title }}</a>
+        </header>
+
+        <article>
+            <h1>{{ page.title }}</h1>
+            <div class="post-meta">
+                <span>📅 {{ page.publish_date[:10] }}</span>
+                <span>⏱️ {{ page.reading_time }} min read</span>
+            </div>
+            <div class="post-content">
+                {{ page.content|markdown|safe }}
+            </div>
+            <div class="social-share">
+                <amp-social-share type="twitter"
+                                  data-param-text="{{ page.title }}"
+                                  data-param-url="{{ request.url_root }}{{ lang }}/page/{{ page.slug }}">
+                </amp-social-share>
+                <amp-social-share type="linkedin"
+                                  data-param-url="{{ request.url_root }}{{ lang }}/page/{{ page.slug }}">
+                </amp-social-share>
+                <amp-social-share type="email"
+                                  data-param-subject="{{ page.title }}"
+                                  data-param-body="{{ request.url_root }}{{ lang }}/page/{{ page.slug }}">
+                </amp-social-share>
+            </div>
+            <div class="amp-badge">
+                <p>⚡ You're reading the AMP version</p>
+                <p><a href="{{ request.url_root }}{{ lang }}/page/{{ page.slug }}">View full version</a></p>
+            </div>
+        </article>
+
+        <footer>
+            <p>&copy; {{ blog_title }} | <a href="{{ request.url_root }}{{ lang }}/">Home</a> | <a href="{{ request.url_root }}{{ lang }}/rss">RSS</a></p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,225 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'pages' %}
+
+{% block title %}Pages{% endblock %}
+
+{% block page_header %}<i class="fas fa-file"></i> Pages{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .filters-card, .pages-table {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    .badge-status { padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .lang-badge { background: #6c757d; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .action-btn { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filters-card">
+    <form method="get" action="{{ url_for('admin_pages') }}">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label"><i class="fas fa-search"></i> Search</label>
+                <input type="text" name="q" class="form-control" placeholder="Search pages..." value="{{ search_query or '' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><i class="fas fa-filter"></i> Status</label>
+                <select name="status" class="form-select">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Status</option>
+                    <option value="published" {% if status_filter == 'published' %}selected{% endif %}>Published</option>
+                    <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><i class="fas fa-globe"></i> Language</label>
+                <select name="language" class="form-select">
+                    <option value="all" {% if language_filter == 'all' %}selected{% endif %}>All Languages</option>
+                    {% for lang_code, lang_info in languages.items() %}
+                    <option value="{{ lang_code }}" {% if language_filter == lang_code %}selected{% endif %}>{{ lang_info.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Filter
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="pages-table">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><i class="fas fa-list"></i> All Pages ({{ pages|length }})</h5>
+        {% if status_filter != 'all' or language_filter != 'all' or search_query %}
+        <a href="{{ url_for('admin_pages') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-times"></i> Clear Filters
+        </a>
+        {% endif %}
+    </div>
+
+    {% if pages %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Language</th>
+                    <th>Status</th>
+                    <th>Reading Time</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for page in pages %}
+                <tr>
+                    <td>
+                        <strong>{{ page.title }}</strong><br>
+                        <small class="text-muted">{{ page.slug }}</small>
+                    </td>
+                    <td>{{ page.author }}</td>
+                    <td><span class="lang-badge">{{ page.language }}</span></td>
+                    <td>
+                        {% if page.status == 'published' %}
+                        <span class="badge bg-success badge-status">Published</span>
+                        {% elif page.status == 'draft' %}
+                        <span class="badge bg-warning badge-status">Draft</span>
+                        {% else %}
+                        <span class="badge bg-info badge-status">Scheduled</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ page.reading_time }} min</td>
+                    <td>
+                        <small>{{ page.publish_date[:10] }}</small><br>
+                        <small class="text-muted">{{ page.publish_date[11:16] }}</small>
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            {% if page.status == 'published' %}
+                            <a href="/{{ page.language }}/page/{{ page.slug }}" target="_blank" class="btn btn-sm btn-outline-primary action-btn" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% else %}
+                            <button type="button" class="btn btn-sm btn-outline-info action-btn" title="Preview Draft" onclick="getPagePreviewLink({{ page.id }}, '{{ page.share_token or '' }}')">
+                                <i class="fas fa-share-alt"></i>
+                            </button>
+                            {% endif %}
+                            <a href="{{ url_for('admin_edit_page', page_id=page.id) }}" class="btn btn-sm btn-outline-secondary action-btn" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger action-btn" title="Delete" onclick="deletePage({{ page.id }}, '{{ page.title }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No pages found</p>
+        <a href="{{ url_for('admin_new_page') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Your First Page
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<form id="deletePageForm" method="POST" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function deletePage(pageId, pageTitle) {
+    if (confirm(`Are you sure you want to delete "${pageTitle}"?\n\nThis action cannot be undone.`)) {
+        const form = document.getElementById('deletePageForm');
+        form.action = `/admin/pages/delete/${pageId}`;
+        form.submit();
+    }
+}
+
+function getPagePreviewLink(pageId, existingToken) {
+    if (existingToken) {
+        showPreviewLinkModal(`${window.location.origin}/preview/page/${existingToken}`);
+    } else {
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        fetch(`/admin/pages/${pageId}/generate-share-link`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showPreviewLinkModal(data.preview_url);
+            } else {
+                alert('Error generating preview link: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error generating preview link');
+        });
+    }
+}
+
+function showPreviewLinkModal(url) {
+    const modal = `
+        <div class="modal fade" id="previewLinkModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-share-alt"></i> Preview Link</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted">Share this link to let others preview the unpublished page:</p>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="previewUrlInput" value="${url}" readonly>
+                            <button class="btn btn-primary" onclick="copyPreviewLink()">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <div class="mt-3">
+                            <a href="${url}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-external-link-alt"></i> Open Preview
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const existingModal = document.getElementById('previewLinkModal');
+    if (existingModal) { existingModal.remove(); }
+    document.body.insertAdjacentHTML('beforeend', modal);
+
+    const previewModal = new bootstrap.Modal(document.getElementById('previewLinkModal'));
+    previewModal.show();
+}
+
+function copyPreviewLink() {
+    const input = document.getElementById('previewUrlInput');
+    input.select();
+    document.execCommand('copy');
+    alert('Preview link copied to clipboard!');
+}
+</script>
+{% endblock %}

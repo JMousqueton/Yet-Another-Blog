@@ -1,0 +1,182 @@
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'pages' %}
+
+{% block title %}Edit Page{% endblock %}
+
+{% block page_header %}<i class="fas fa-edit"></i> Edit Page{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .form-card { background: white; border-radius: 10px; padding: 2rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+    .form-label { font-weight: 600; margin-bottom: 0.5rem; }
+    .required:after { content: " *"; color: red; }
+    textarea.form-control { min-height: 150px; }
+    #content { min-height: 400px; font-family: 'Courier New', monospace; }
+    .slug-generator { font-size: 0.875rem; color: #6c757d; cursor: pointer; }
+    .slug-generator:hover { color: var(--primary-color); }
+    .char-count { font-size: 0.875rem; color: #6c757d; float: right; }
+    .edit-info { background: #e7f3ff; border-left: 4px solid #007bff; padding: 0.75rem 1rem; margin-bottom: 1.5rem; border-radius: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <div class="edit-info">
+        <i class="fas fa-info-circle"></i>
+        Created: {{ page.created_at[:10] }} | Last updated: {{ page.updated_at[:10] }}
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_edit_page', page_id=page.id) }}" id="pageForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="row">
+            <div class="col-md-8">
+                <div class="mb-3">
+                    <label for="title" class="form-label required">Title</label>
+                    <input type="text" class="form-control form-control-lg" id="title" name="title" placeholder="Enter page title" value="{{ form_data.title or page.title or '' }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="slug" class="form-label required">Slug <small class="slug-generator" onclick="generateSlug()"><i class="fas fa-magic"></i> Generate from title</small></label>
+                    <input type="text" class="form-control" id="slug" name="slug" placeholder="page-slug" value="{{ form_data.slug or page.slug or '' }}" pattern="[a-z0-9\-]*" title="Only lowercase letters, numbers, and hyphens" required>
+                    <small class="form-text text-muted">URL-friendly version (lowercase, hyphens only)</small>
+                </div>
+                <div class="mb-3">
+                    <label for="content" class="form-label required">Content (Markdown) <span class="char-count" id="contentCount">0 characters</span></label>
+                    <textarea class="form-control" id="content" name="content">{{ form_data.content or page.content or '' }}</textarea>
+                    <small class="form-text text-muted">Use Markdown syntax for formatting</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="language" class="form-label required">Language</label>
+                    <select class="form-select" id="language" name="language" required>
+                        {% for lang_code, lang_info in languages.items() %}
+                        <option value="{{ lang_code }}" {% if form_data.language == lang_code or (not form_data.language and page.language == lang_code) %}selected{% endif %}>{{ lang_info.flag }} {{ lang_info.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="status" class="form-label required">Status</label>
+                    <select class="form-select" id="status" name="status" required>
+                        <option value="draft" {% if form_data.status == 'draft' or (not form_data.status and page.status == 'draft') %}selected{% endif %}>Draft</option>
+                        <option value="published" {% if form_data.status == 'published' or (not form_data.status and page.status == 'published') %}selected{% endif %}>Published</option>
+                        <option value="scheduled" {% if form_data.status == 'scheduled' or (not form_data.status and page.status == 'scheduled') %}selected{% endif %}>Scheduled</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="publish_date" class="form-label required">Publish Date & Time</label>
+                    <input type="datetime-local" class="form-control" id="publish_date" name="publish_date" value="{{ form_data.publish_date or page.publish_date[:16] or '' }}" required>
+                    <small class="form-text text-muted"><a href="#" onclick="setNow(); return false;">Set to now</a></small>
+                </div>
+                <div class="mb-3">
+                    <label for="author" class="form-label required">Author</label>
+                    <select class="form-control" id="author" name="author" required>
+                        {% for author in authors %}
+                            <option value="{{ author }}" {% if form_data.author == author or (not form_data.author and page.author == author) %}selected{% endif %}>{{ author }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+
+                    {% if page.status in ['draft', 'scheduled'] %}
+                    <button type="button" class="btn btn-outline-info" onclick="generateShareLink()">
+                        <i class="fas fa-share-alt"></i>
+                        <span id="shareLinkBtnText">Generate Preview Link</span>
+                    </button>
+                    <div id="shareLinkContainer" style="display: {{ 'block' if page.share_token else 'none' }};" class="mt-3 p-3 bg-light rounded">
+                        <label class="form-label small text-muted">Shareable Preview Link:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="shareLink" readonly value="{{ page.share_token and (request.url_root ~ 'preview/page/' ~ page.share_token) }}" {% if not page.share_token %}style="display: none;"{% endif %}>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyShareLink()" id="copyLinkBtn" {% if not page.share_token %}style="display: none;"{% endif %}>
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <small class="text-muted d-block mt-2"><i class="fas fa-info-circle"></i> Share this link to let others preview the unpublished page</small>
+                    </div>
+                    {% endif %}
+
+                    <a href="{{ url_for('admin_pages') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function generateSlug() {
+    const title = document.getElementById('title').value;
+    const slug = title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
+    document.getElementById('slug').value = slug;
+}
+function setNow() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('publish_date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+function updateCharCount(elementId, counterId) {
+    const element = document.getElementById(elementId);
+    const counter = document.getElementById(counterId);
+    if (element && counter) { counter.textContent = element.value.length + ' characters'; }
+}
+document.getElementById('content').addEventListener('input', () => updateCharCount('content', 'contentCount'));
+updateCharCount('content', 'contentCount');
+
+function generateShareLink() {
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    fetch(`/admin/pages/{{ page.id }}/generate-share-link`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('shareLinkBtnText').innerText = 'Preview Link Ready';
+            document.getElementById('shareLinkContainer').style.display = 'block';
+            document.getElementById('shareLink').value = data.preview_url;
+            document.getElementById('shareLink').style.display = 'block';
+            document.getElementById('copyLinkBtn').style.display = 'block';
+        } else {
+            alert('Error generating preview link: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error generating preview link');
+    });
+}
+
+function copyShareLink() {
+    const input = document.getElementById('shareLink');
+    input.select();
+    document.execCommand('copy');
+    alert('Preview link copied to clipboard!');
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script>
+    const easyMDE = new EasyMDE({ element: document.getElementById('content'), spellChecker: false });
+    function refreshContentCount() {
+        const counter = document.getElementById('contentCount');
+        if (counter) { counter.textContent = easyMDE.value().length + ' characters'; }
+    }
+    easyMDE.codemirror.on('change', refreshContentCount);
+    refreshContentCount();
+</script>
+{% endblock %}

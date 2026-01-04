@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block meta_tags %}
+    <link rel="canonical" href="{{ request.url }}">
+    <link rel="amphtml" href="{{ request.url_root }}{{ lang }}/page/{{ page.slug }}/amp">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:title" content="{{ page.title }}">
+    <meta property="og:description" content="{{ page.content|striptags|truncate(160) }}">
+    <meta property="og:image" content="{{ meta_image or (request.url_root + 'static/default-og-image.jpg') }}">
+    <meta property="og:locale" content="{{ lang }}_{{ lang.upper() }}">
+    <meta property="article:published_time" content="{{ page.publish_date }}">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ request.url }}">
+    <meta name="twitter:title" content="{{ page.title }}">
+    <meta name="twitter:description" content="{{ page.content|striptags|truncate(160) }}">
+    <meta name="twitter:image" content="{{ meta_image or (request.url_root + 'static/default-og-image.jpg') }}">
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <article>
+            <header class="mb-4">
+                <h1 class="display-4 fw-bold">{{ page.title }}</h1>
+                <div class="post-meta mb-3">
+                    <i class="far fa-calendar"></i> {{ page.publish_date[:10] }}
+                    <span class="mx-2">|</span>
+                    <i class="far fa-clock"></i> {{ page.reading_time }} {{ t.post.min_read if t and t.post else 'min read' }}
+                </div>
+            </header>
+
+            <div class="post-content">
+                {{ page.content|markdown|safe }}
+            </div>
+
+            <hr class="my-5">
+            <div class="text-center">
+                <a href="/{{ lang }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ t.post.back_to_home if t and t.post else 'Back to home' }}
+                </a>
+            </div>
+        </article>
+    </div>
+</div>
+{% endblock %}
