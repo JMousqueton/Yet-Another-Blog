@@ -202,7 +202,7 @@
                         
                         <!-- Publish Date -->
                         <div class="mb-3">
-                            <label for="publish_date" class="form-label required">Publish Date & Time</label>
+                            <label for="publish_date" class="form-label required">Publish Date & Time (UTC)</label>
                             <input type="datetime-local" 
                                    class="form-control" 
                                    id="publish_date" 
@@ -304,14 +304,14 @@
             document.getElementById('slug').value = slug;
         }
         
-        // Set publish date to now
+        // Set publish date to now (UTC)
         function setNow() {
             const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const year = now.getUTCFullYear();
+            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(now.getUTCDate()).padStart(2, '0');
+            const hours = String(now.getUTCHours()).padStart(2, '0');
+            const minutes = String(now.getUTCMinutes()).padStart(2, '0');
             const datetime = `${year}-${month}-${day}T${hours}:${minutes}`;
             document.getElementById('publish_date').value = datetime;
         }
