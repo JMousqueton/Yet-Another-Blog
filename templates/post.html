@@ -73,14 +73,15 @@
                     {{ post.publish_date[:10] }}
                     {% if post.author %}
                     <span class="mx-2">|</span>
-                    <i class="far fa-user"></i> 
-                    <a href="/{{ lang }}/author/{{ post.author|replace(' ', '-') }}" class="text-decoration-none">
+                    <i class="far fa-user"></i>
+                    <span class="fw-semibold">{{ t['post']['author_label'] }}:</span>
+                    <a href="/{{ lang }}/author/{{ post.author|replace(' ', '-') }}" class="text-decoration-none ms-1">
                         {{ post.author }}
                     </a>
                     {% endif %}
                     <span class="mx-2">|</span>
                     <i class="far fa-clock"></i>
-                    {{ post.reading_time }} {{ t.post.min_read }}
+                    {{ post.reading_time }} {{ t['post']['min_read'] }}
                 </div>
             </header>
             
@@ -226,6 +227,16 @@
                                 <h5 class="mb-0"><i class="fas fa-pen me-2"></i>{{ t.comments.submit if t.comments.submit else 'Leave a Comment' }}</h5>
                             </div>
                             <div class="card-body p-4">
+                                                        {% with messages = get_flashed_messages(with_categories=true) %}
+                                                            {% if messages %}
+                                                                {% for category, message in messages %}
+                                                                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                                                        {{ message }}
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                                                    </div>
+                                                                {% endfor %}
+                                                            {% endif %}
+                                                        {% endwith %}
                             <form method="POST" action="{{ url_for('submit_comment', lang=lang, slug=post.slug) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="parent_id" id="commentParentId" value="">
@@ -234,14 +245,19 @@
                                         <label class="form-label fw-semibold" for="author_name">
                                             <i class="fas fa-user me-1"></i>{{ t.comments.name_label if t.comments.name_label else 'Name' }}
                                         </label>
-                                        <input type="text" class="form-control form-control-lg" id="author_name" name="author_name" placeholder="{{ t.comments.name_placeholder if t.comments.name_placeholder else 'Your name' }}" required>
+                                        {% if session.is_admin and session.user_name %}
+                                            <input type="text" class="form-control form-control-lg" id="author_name" name="author_name" value="{{ session.user_name }}" readonly>
+                                            <div class="small text-primary mt-1"><span class="badge bg-primary">{{ author_tag }}</span></div>
+                                        {% else %}
+                                            <input type="text" class="form-control form-control-lg" id="author_name" name="author_name" placeholder="{{ t.comments.name_placeholder if t.comments.name_placeholder else 'Your name' }}" value="{{ author_name_prefill }}" required>
+                                        {% endif %}
                                 </div>
 
                                 <div class="mb-3">
                                         <label class="form-label fw-semibold" for="comment_content">
                                             <i class="fas fa-comment-dots me-1"></i>{{ t.comments.comment_label if t.comments.comment_label else 'Comment' }}
                                         </label>
-                                        <textarea class="form-control form-control-lg" id="comment_content" name="content" rows="5" maxlength="2000" placeholder="{{ t.comments.comment_placeholder if t.comments.comment_placeholder else 'Share your thoughts (text and emojis only)' }}" required></textarea>
+                                        <textarea class="form-control form-control-lg" id="comment_content" name="content" rows="5" maxlength="2000" placeholder="{{ t.comments.comment_placeholder if t.comments.comment_placeholder else 'Share your thoughts (text and emojis only)' }}" required>{{ content_prefill }}</textarea>
                                         <small class="text-muted"><i class="fas fa-lightbulb me-1"></i>{{ t.comments.comment_hint if t.comments.comment_hint else 'No HTML or markdown. Keep it friendly.' }}</small>
 
                                     <div class="emoji-picker mt-2">
@@ -258,11 +274,13 @@
                                 </div>
 
                                 <div class="mb-3">
-                                        <label class="form-label fw-semibold" for="captcha_answer">
-                                            <i class="fas fa-shield-alt me-1"></i>{{ t.comments.captcha_label if t.comments.captcha_label else 'Anti-spam check' }} 
-                                            <span class="text-primary fw-bold">{{ captcha_prompt }}</span>
-                                        </label>
-                                        <input type="text" class="form-control form-control-lg" id="captcha_answer" name="captcha_answer" placeholder="{{ t.comments.captcha_placeholder if t.comments.captcha_placeholder else 'Enter the result' }}" required autocomplete="off" style="max-width: 420px; font-size: 1.0rem; height: 3rem;">
+                                {% if not session.is_admin %}
+                                    <label class="form-label fw-semibold" for="captcha_answer">
+                                        <i class="fas fa-shield-alt me-1"></i>{{ t.comments.captcha_label if t.comments.captcha_label else 'Anti-spam check' }} 
+                                        <span class="text-primary fw-bold">{{ captcha_prompt }}</span>
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" id="captcha_answer" name="captcha_answer" placeholder="{{ t.comments.captcha_placeholder if t.comments.captcha_placeholder else 'Enter the result' }}" required autocomplete="off" style="max-width: 420px; font-size: 1.0rem; height: 3rem;">
+                                {% endif %}
                                 </div>
 
                                 <div class="d-flex align-items-center gap-2">
@@ -288,6 +306,9 @@
                                         <div>
                                                 <div class="fw-bold text-primary">
                                                     <i class="fas fa-user-circle me-1"></i>{{ comment.author_name }}
+                                                    {% if comment.author_name == post.author or (session.is_admin and comment.author_name == session.user_name) %}
+                                                        <span class="badge bg-primary ms-1">{{ author_tag }}</span>
+                                                    {% endif %}
                                                 </div>
                                                 <div class="small text-muted">
                                                     <i class="far fa-clock me-1"></i>{{ comment.created_at[:16] }}

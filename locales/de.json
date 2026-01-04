@@ -9,6 +9,7 @@
   },
   "post": {
     "was_helpful": "War dieser Artikel hilfreich?",
+    "author_label": "Autor",
     "helpful": "Hilfreich",
     "not_helpful": "Nicht hilfreich",
     "reaction_hint": "Ihr Feedback hilft uns, unsere Inhalte zu verbessern.",
@@ -74,6 +75,7 @@
   },
     "comments": {
       "title": "Kommentare",
+      "error_unauthorized_name": "Dieser Name ist nicht erlaubt. Bitte wählen Sie einen anderen.",
       "moderation_note": "Kommentare werden vor der Veröffentlichung geprüft.",
       "name_label": "Name",
       "name_placeholder": "Ihr Name",

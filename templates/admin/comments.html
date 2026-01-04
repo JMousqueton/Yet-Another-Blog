@@ -64,21 +64,23 @@
                             </td>
                             <td class="text-muted small">{{ comment.created_at[:16] }}</td>
                             <td class="text-end">
-                                {% if comment.status == 'pending' %}
-                                <form action="{{ url_for('admin_approve_comment', comment_id=comment.id) }}" method="POST" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button class="btn btn-sm btn-success" type="submit">
-                                        <i class="fas fa-check"></i> Approve
-                                    </button>
-                                </form>
-                                {% endif %}
-                                <form action="{{ url_for('admin_delete_comment', comment_id=comment.id) }}" method="POST" class="d-inline ms-1" onsubmit="return confirm('Delete this comment?');">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                                <a href="/{{ comment.post_language }}/post/{{ comment.post_slug }}#comment-{{ comment.id }}" class="btn btn-sm btn-outline-secondary ms-1" target="_blank" rel="noopener">View</a>
+                                <div class="d-inline-flex align-items-center">
+                                    {% if comment.status == 'pending' %}
+                                    <form action="{{ url_for('admin_approve_comment', comment_id=comment.id) }}" method="POST" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-success" type="submit">
+                                            <i class="fas fa-check"></i> Approve
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    <form action="{{ url_for('admin_delete_comment', comment_id=comment.id) }}" method="POST" class="d-inline ms-1" onsubmit="return confirm('Delete this comment?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    <a href="/{{ comment.post_language }}/post/{{ comment.post_slug }}#comment-{{ comment.id }}" class="btn btn-sm btn-outline-secondary ms-1" target="_blank" rel="noopener">View</a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}

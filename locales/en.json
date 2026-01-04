@@ -9,6 +9,7 @@
   },
   "post": {
     "min_read": "min read",
+    "author_label": "Author",
     "read_more": "Read More",
     "back_to_home": "Back to Home",
     "was_helpful": "Was this helpful?",
@@ -73,6 +74,7 @@
   },
   "comments": {
     "title": "Comments",
+    "error_unauthorized_name": "This name is not allowed. Please choose another name.",
     "moderation_note": "Comments are reviewed before publication.",
     "name_label": "Name",
     "name_placeholder": "Your name",

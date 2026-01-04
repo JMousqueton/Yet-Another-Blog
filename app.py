@@ -345,26 +345,26 @@ def get_pending_comment_count():
 @app.context_processor
 def inject_global_settings():
     """Inject commonly used settings and translations into all templates."""
-    # Get current language with fallback to English
-    current_lang = getattr(g, 'language', 'en')
-    
-    # Ensure language is valid, otherwise use English
-    if current_lang not in TRANSLATIONS:
+    # Try to get language from template context, then URL, then g.language, then cookie, then default
+    # Use lang from g, then URL, then cookie, then default
+    current_lang = getattr(g, 'language', None)
+    if not current_lang:
+        path_parts = request.path.strip('/').split('/')
+        if path_parts and path_parts[0] in TRANSLATIONS:
+            current_lang = path_parts[0]
+    if not current_lang:
+        current_lang = request.cookies.get('preferred_language')
+    if not current_lang or current_lang not in TRANSLATIONS:
         current_lang = 'en'
-    
-    # Get translations for current language with double fallback to English
     translations = TRANSLATIONS.get(current_lang, TRANSLATIONS.get('en', {}))
-    
-    # Get blog title for current language
     blog_title = get_setting(f'blog_title_{current_lang}') or get_setting('blog_title_en') or 'My Blog'
-    
     return {
         'global_favicon': get_setting('favicon', 'favicon.ico'),
         'global_template_css': get_setting('template_css', 'default.css'),
         'analytics_code': get_setting('analytics_code', ''),
         'blog_title': blog_title,
         't': translations,
-        'lang': current_lang,  # Ensure lang is always available in templates
+        'lang': current_lang,
         'disclaimer_page': get_disclaimer_page(current_lang),
         'contact_unread_count': get_unread_contact_count() if session.get('is_admin') else 0,
         'comment_pending_count': get_pending_comment_count() if session.get('is_admin') else 0
@@ -1193,6 +1193,10 @@ def post_detail(lang, slug):
         ip_address = ip_address.split(',')[0].strip()
     user_reaction = get_user_reaction(post['id'], ip_address)
     
+    author_tag = TRANSLATIONS.get(lang, TRANSLATIONS['en']).get('post', {}).get('author_label', 'Author')
+    # Get prefilled values from query params if present
+    author_name_prefill = request.args.get('author_name', '')
+    content_prefill = request.args.get('content', '')
     response = make_response(render_template('post.html', 
                          post=post, 
                          author=author_info,
@@ -1215,7 +1219,10 @@ def post_detail(lang, slug):
                          meta_type='article',
                          template_css=template_css,
                          blog_title=blog_title,
-                         blog_subtitle=blog_subtitle))
+                         blog_subtitle=blog_subtitle,
+                         author_tag=author_tag,
+                         author_name_prefill=author_name_prefill,
+                         content_prefill=content_prefill))
     
     # Set language cookie if not already set
     if not has_language_cookie:
@@ -1252,6 +1259,11 @@ def admin_bulk_comment_action():
 @app.route('/<lang>/post/<slug>/comment', methods=['POST'])
 @limiter.limit('5 per minute')
 def submit_comment(lang, slug):
+    # List of unauthorized names (case-insensitive)
+    UNAUTHORIZED_NAMES = [
+            'admin', 'author', 'auteur', 'administrateur',
+            'julien', 'julien mousqueton', 'mousqueton', 'root'
+    ]
     """Handle public comment submissions with moderation and threading."""
     if lang not in LANGUAGES:
         abort(404)
@@ -1284,20 +1296,40 @@ def submit_comment(lang, slug):
         flash(msg('disabled', 'Comments are disabled for this post.'), 'error')
         return redirect(url_for('post_detail', lang=lang, slug=slug))
 
-    author_name = (request.form.get('author_name') or '').strip()
+    # Use admin name if logged in
+    if session.get('is_admin') and session.get('user_name'):
+        author_name = session['user_name']
+    else:
+        author_name = (request.form.get('author_name') or '').strip()
     content_raw = request.form.get('content') or ''
     parent_id_raw = request.form.get('parent_id')
     captcha_input = request.form.get('captcha_answer', '').strip()
     expected = session.get('comment_captcha_answer')
 
-    # Validate captcha first
-    if not (captcha_input.isdigit() and expected is not None and int(captcha_input) == expected):
-        flash(msg('error_captcha', 'Captcha is incorrect. Please try again.'), 'error')
-        return redirect(url_for('post_detail', lang=lang, slug=slug) + '#comments')
+    # Validate captcha only for non-admin users
+    if not session.get('is_admin'):
+        if not (captcha_input.isdigit() and expected is not None and int(captcha_input) == expected):
+            flash(msg('error_captcha', 'Captcha is incorrect. Please try again.'), 'error')
+            return redirect(url_for('post_detail', lang=lang, slug=slug, author_name=author_name, content=content_raw) + '#comments')
 
-    if not author_name or not content_raw.strip():
-        flash(msg('error_required', 'Name and comment are required.'), 'error')
-        return redirect(url_for('post_detail', lang=lang, slug=slug) + '#comments')
+
+    # Check for unauthorized names and allowed characters (only for non-logged-in users)
+    import re
+    allowed_name_re = re.compile(r'^[A-Za-z0-9\- ]+$')
+    if not session.get('is_admin'):
+        if (
+            not author_name or
+            not content_raw.strip() or
+            author_name.lower() in [n.lower() for n in UNAUTHORIZED_NAMES] or
+            not allowed_name_re.match(author_name)
+        ):
+            unauthorized_msg = comment_copy.get('error_unauthorized_name', 'This name is not allowed. Please choose another name.')
+            flash(unauthorized_msg, 'error')
+            return redirect(url_for('post_detail', lang=lang, slug=slug, author_name=author_name, content=content_raw) + '#comments')
+    else:
+        if not author_name or not content_raw.strip():
+            flash(msg('error_required', 'Name and comment are required.'), 'error')
+            return redirect(url_for('post_detail', lang=lang, slug=slug, author_name=author_name, content=content_raw) + '#comments')
 
     content_clean = clean_comment_content(content_raw)
     if not content_clean:
@@ -1322,16 +1354,32 @@ def submit_comment(lang, slug):
         except ValueError:
             parent_id = None
 
-    try:
-        db.execute('''
-            INSERT INTO comments (post_id, parent_id, author_name, content, status, language, created_at)
-            VALUES (?, ?, ?, ?, 'pending', ?, ?)
-        ''', (post['id'], parent_id, author_name, content_clean, lang, datetime.now().isoformat()))
-        db.commit()
-        flash(msg('submitted', 'Thank you! Your comment is awaiting moderation.'), 'success')
-    except Exception as e:
-        print(f"Error saving comment: {e}")
-        flash(msg('error_generic', 'Unable to submit your comment right now.'), 'error')
+
+    # Auto-approve if admin is post author
+    status = 'pending'
+    if session.get('is_admin') and author_name == post['author']:
+        status = 'approved'
+
+    # Prevent duplicate comments: check for same post, author, content, parent, and status 'pending' or 'approved'
+    existing = db.execute('''
+        SELECT id FROM comments WHERE post_id = ? AND author_name = ? AND content = ? AND IFNULL(parent_id, 0) = IFNULL(?, 0) AND status IN ('pending', 'approved')
+    ''', (post['id'], author_name, content_clean, parent_id)).fetchone()
+    if existing:
+        flash(msg('error_generic', 'Duplicate comment detected.'), 'warning')
+    else:
+        try:
+            db.execute('''
+                INSERT INTO comments (post_id, parent_id, author_name, content, status, language, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (post['id'], parent_id, author_name, content_clean, status, lang, datetime.now().isoformat()))
+            db.commit()
+            if status == 'approved':
+                flash(msg('submitted', 'Thank you! Your comment is published.'), 'success')
+            else:
+                flash(msg('submitted', 'Thank you! Your comment is awaiting moderation.'), 'success')
+        except Exception as e:
+            print(f"Error saving comment: {e}")
+            flash(msg('error_generic', 'Unable to submit your comment right now.'), 'error')
 
     return redirect(url_for('post_detail', lang=lang, slug=slug) + '#comments')
 
@@ -2319,7 +2367,7 @@ def admin_comments():
     db = get_db()
 
     query = '''
-        SELECT c.*, p.title as post_title, p.slug as post_slug, p.language as post_language
+        SELECT c.*, p.title as post_title, p.slug as post_slug, p.language as post_language, p.author as post_author
         FROM comments c
         JOIN posts p ON c.post_id = p.id
     '''
@@ -2333,7 +2381,10 @@ def admin_comments():
 
     comments = db.execute(query, params).fetchall()
 
-    return render_template('admin/comments.html', comments=comments, status=status)
+    # Get translation for 'author' tag in the current language (fallback to English)
+    lang = comments[0]['post_language'] if comments else 'en'
+    author_tag = TRANSLATIONS.get(lang, TRANSLATIONS['en']).get('author', {}).get('author', 'author')
+    return render_template('admin/comments.html', comments=comments, status=status, author_tag=author_tag)
 
 
 @app.route('/admin/comments/<int:comment_id>/approve', methods=['POST'])
@@ -2341,12 +2392,18 @@ def admin_comments():
 @admin_required
 def admin_approve_comment(comment_id):
     db = get_db()
-    updated = db.execute("UPDATE comments SET status = 'approved' WHERE id = ?", (comment_id,)).rowcount
+    # Only approve if the comment is still pending
+    updated = db.execute("UPDATE comments SET status = 'approved' WHERE id = ? AND status = 'pending'", (comment_id,)).rowcount
     db.commit()
     if updated:
         flash('Comment approved and published', 'success')
     else:
-        flash('Comment not found', 'error')
+        # If not updated, check if it exists and is already approved
+        row = db.execute("SELECT status FROM comments WHERE id = ?", (comment_id,)).fetchone()
+        if row and row['status'] == 'approved':
+            flash('Comment is already approved.', 'info')
+        else:
+            flash('Comment not found', 'error')
 
     ref = request.referrer or url_for('admin_comments')
     return redirect(ref)
