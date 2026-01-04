@@ -1130,6 +1130,7 @@ def post_detail(lang, slug):
                          allow_comments=allow_comments,
                          comment_tree=comment_tree,
                          comments_count=len(approved_comments),
+                         comments_enabled_global=comments_enabled_global,
                          captcha_prompt=captcha_prompt,
                          lang=lang, 
                          languages=get_enabled_languages(), 

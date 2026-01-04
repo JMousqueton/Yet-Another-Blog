@@ -181,6 +181,7 @@
                 </div>
             </div>
 
+            {% if comments_enabled_global %}
             <!-- Comments -->
             <hr class="my-5" id="comments">
             <section class="comments-section">
@@ -300,6 +301,7 @@
                         </div>
                 {% endif %}
             </section>
+            {% endif %}
             
             <!-- Post Navigation -->
             {% if prev_post or next_post %}
