@@ -8,6 +8,10 @@
     "title": "Wählen Sie Ihre Sprache"
   },
   "post": {
+    "was_helpful": "War dieser Artikel hilfreich?",
+    "helpful": "Hilfreich",
+    "not_helpful": "Nicht hilfreich",
+    "reaction_hint": "Ihr Feedback hilft uns, unsere Inhalte zu verbessern.",
     "min_read": "min Lesezeit",
     "read_more": "Weiterlesen",
     "back_to_home": "Zurück zur Startseite",

@@ -8,6 +8,10 @@
     "title": "Choisissez votre langue"
   },
   "post": {
+    "was_helpful": "Cet article était-il utile ?",
+    "helpful": "Utile",
+    "not_helpful": "Pas utile",
+    "reaction_hint": "Vos retours nous aident à améliorer notre contenu.",
     "min_read": "min de lecture",
     "read_more": "Lire la suite",
     "back_to_home": "Retour à l'accueil",

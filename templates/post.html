@@ -125,20 +125,37 @@
                 </a>
             </div>
             
-            <!-- Reactions -->
-            <div class="reactions-section">
-                <p style="margin-bottom: 1rem; font-weight: 600;">
-                    {{ t.post.was_helpful }}
-                </p>
-                <div class="reactions-container">
-                    <button class="reaction-btn" data-emoji="👍" data-label="Helpful" title="Helpful">
-                        <i class="fa-solid fa-thumbs-up"></i>
-                        <span class="count"></span>
-                    </button>
-                    <button class="reaction-btn" data-emoji="👎" data-label="Not Helpful" title="Not Helpful">
-                        <i class="fa-solid fa-thumbs-down"></i>
-                        <span class="count"></span>
-                    </button>
+            <!-- Reactions: Was this helpful? -->
+            <div class="reactions-section my-5">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body text-center py-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-question-circle me-2"></i>{{ t.post.was_helpful }}
+                        </h5>
+                        <div class="reactions-container d-flex justify-content-center gap-3">
+                            <form method="POST" action="{{ url_for('submit_reaction', lang=lang, slug=post.slug) }}" class="reaction-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="reaction_type" value="helpful">
+                                <button type="submit" class="reaction-btn {% if user_reaction == 'helpful' %}active{% endif %}" data-type="helpful">
+                                    <i class="fas fa-thumbs-up"></i>
+                                    <span class="reaction-label">{{ t.post.helpful }}</span>
+                                    <span class="reaction-count badge bg-secondary ms-2">{{ reaction_counts.helpful }}</span>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('submit_reaction', lang=lang, slug=post.slug) }}" class="reaction-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="reaction_type" value="not_helpful">
+                                <button type="submit" class="reaction-btn {% if user_reaction == 'not_helpful' %}active{% endif %}" data-type="not_helpful">
+                                    <i class="fas fa-thumbs-down"></i>
+                                    <span class="reaction-label">{{ t.post.not_helpful }}</span>
+                                    <span class="reaction-count badge bg-secondary ms-2">{{ reaction_counts.not_helpful }}</span>
+                                </button>
+                            </form>
+                        </div>
+                        <p class="text-muted small mt-3 mb-0">
+                            <i class="fas fa-info-circle me-1"></i>{{ t.post.reaction_hint }}
+                        </p>
+                    </div>
                 </div>
             </div>
             
@@ -436,15 +453,23 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0;
-        font-size: 1.25rem;
+        gap: 0.5rem;
+        font-size: 1rem;
         transition: all 0.3s ease;
         white-space: nowrap;
         position: relative;
     }
     
     .reaction-btn i {
-        display: block;
+        font-size: 1.25rem;
+    }
+
+    .reaction-btn .reaction-label {
+        font-weight: 500;
+    }
+
+    .reaction-btn .reaction-count {
+        font-size: 0.85rem;
     }
     
     .reaction-btn:hover {
@@ -457,6 +482,32 @@
         border-color: var(--primary-color);
         background-color: rgba(0, 123, 255, 0.15);
         font-weight: 600;
+    }
+
+    [data-theme="dark"] .reaction-btn {
+        background: #2f343a;
+        border-color: #3c434c;
+    }
+
+    [data-theme="dark"] .reaction-btn:hover {
+        background-color: rgba(0, 123, 255, 0.2);
+    }
+
+    [data-theme="dark"] .reaction-btn.active {
+        background-color: rgba(0, 123, 255, 0.3);
+    }
+
+    .reactions-section .card {
+        border: 1px solid var(--border-color);
+        transition: box-shadow 0.3s ease;
+    }
+
+    .reactions-section .card:hover {
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .reactions-form {
+        margin: 0;
     }
     
     .reaction-btn .count {
@@ -638,117 +689,66 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const postSlug = '{{ post.slug }}';
-    const reactionKey = `reactions_${postSlug}`;
-    const voteKey = `voted_${postSlug}`;
-    const reactionButtons = document.querySelectorAll('.reaction-btn');
+    // Reaction handling with AJAX
+    const reactionForms = document.querySelectorAll('.reaction-form');
     
-    // Safe localStorage access helpers
-    function getStorageItem(key, defaultValue) {
-        try {
-            return localStorage.getItem(key) || defaultValue;
-        } catch (e) {
-            console.warn('localStorage blocked:', e);
-            return defaultValue;
-        }
-    }
-    
-    function setStorageItem(key, value) {
-        try {
-            localStorage.setItem(key, value);
-        } catch (e) {
-            console.warn('localStorage blocked:', e);
-        }
-    }
-    
-    // Load reactions from localStorage
-    function loadReactions() {
-        try {
-            const reactionsStr = getStorageItem(reactionKey, '{}');
-            const reactions = JSON.parse(reactionsStr);
-            reactionButtons.forEach(btn => {
-                const emoji = btn.dataset.emoji;
-                const count = reactions[emoji] || 0;
-                const countSpan = btn.querySelector('.count');
-                countSpan.textContent = count > 0 ? count : '';
-                if (count > 0) {
-                    btn.classList.add('active');
-                }
-            });
-        } catch (e) {
-            console.warn('Failed to load reactions:', e);
-        }
-    }
-    
-    // Save reactions to localStorage
-    function saveReactions() {
-        try {
-            const reactions = {};
-            reactionButtons.forEach(btn => {
-                const count = parseInt(btn.querySelector('.count').textContent) || 0;
-                if (count > 0) {
-                    reactions[btn.dataset.emoji] = count;
-                }
-            });
-            setStorageItem(reactionKey, JSON.stringify(reactions));
-        } catch (e) {
-            console.warn('Failed to save reactions:', e);
-        }
-    }
-    
-    // Check if user has already voted
-    function hasVoted() {
-        return getStorageItem(voteKey, 'false') === 'true';
-    }
-    
-    // Mark user as voted
-    function markAsVoted() {
-        setStorageItem(voteKey, 'true');
-    }
-    
-    // Disable all buttons
-    function disableButtons() {
-        reactionButtons.forEach(btn => {
-            btn.disabled = true;
-            btn.style.opacity = '0.6';
-            btn.style.cursor = 'not-allowed';
-        });
-    }
-    
-    // Handle reaction button clicks
-    reactionButtons.forEach(btn => {
-        btn.addEventListener('click', function(e) {
+    reactionForms.forEach(form => {
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Check if user already voted
-            if (hasVoted()) {
-                alert('{{ t.post.already_voted }}');
-                return;
+            const btn = this.querySelector('.reaction-btn');
+            const countBadge = btn.querySelector('.reaction-count');
+            const reactionType = this.querySelector('input[name="reaction_type"]').value;
+            
+            // Disable all buttons temporarily
+            reactionForms.forEach(f => {
+                f.querySelector('.reaction-btn').disabled = true;
+            });
+            
+            try {
+                const formData = new FormData(this);
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update counts
+                    document.querySelectorAll('.reaction-form').forEach(f => {
+                        const type = f.querySelector('input[name="reaction_type"]').value;
+                        const badge = f.querySelector('.reaction-count');
+                        const button = f.querySelector('.reaction-btn');
+                        
+                        badge.textContent = data.counts[type] || 0;
+                        
+                        // Remove active class from all, add to clicked one
+                        button.classList.remove('active');
+                    });
+                    
+                    // Mark the clicked button as active
+                    btn.classList.add('active');
+                    
+                    // Add animation
+                    btn.style.transform = 'scale(1.1)';
+                    setTimeout(() => {
+                        btn.style.transform = '';
+                    }, 200);
+                } else {
+                    alert(data.error || 'Error submitting reaction');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error submitting reaction');
+            } finally {
+                // Re-enable buttons
+                reactionForms.forEach(f => {
+                    f.querySelector('.reaction-btn').disabled = false;
+                });
             }
-            
-            const countSpan = this.querySelector('.count');
-            let count = parseInt(countSpan.textContent) || 0;
-            count++;
-            countSpan.textContent = count;
-            this.classList.add('active');
-            
-            // Add a little animation
-            this.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                this.style.transform = '';
-            }, 200);
-            
-            saveReactions();
-            markAsVoted();
-            disableButtons();
         });
     });
-    
-    // Initial load and check voting status
-    loadReactions();
-    if (hasVoted()) {
-        disableButtons();
-    }
 
     // Comment reply handling
     const replyButtons = document.querySelectorAll('.reply-link');

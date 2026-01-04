@@ -646,6 +646,23 @@ def migrate_database():
             ON comments(parent_id)
         ''')
 
+        # Reactions table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS reactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER NOT NULL,
+                reaction_type TEXT NOT NULL CHECK(reaction_type IN ('helpful', 'not_helpful')),
+                ip_address TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                UNIQUE(post_id, ip_address)
+            )
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_reactions_post
+            ON reactions(post_id, reaction_type)
+        ''')
+
         # Remove deprecated excerpt column by recreating table without it
         if 'excerpt' in pages_columns:
             cursor.execute('''
@@ -1150,6 +1167,13 @@ def post_detail(lang, slug):
         session['comment_captcha_answer'] = answer
         captcha_prompt = prompt
     
+    # Get reaction counts and user's reaction
+    reaction_counts = get_reaction_counts(post['id'])
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip_address and ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+    user_reaction = get_user_reaction(post['id'], ip_address)
+    
     response = make_response(render_template('post.html', 
                          post=post, 
                          author=author_info,
@@ -1160,6 +1184,8 @@ def post_detail(lang, slug):
                          comments_count=len(approved_comments),
                          comments_enabled_global=comments_enabled_global,
                          captcha_prompt=captcha_prompt,
+                         reaction_counts=reaction_counts,
+                         user_reaction=user_reaction,
                          lang=lang, 
                          languages=get_enabled_languages(), 
                          meta_description=page_meta_description,
@@ -1264,6 +1290,93 @@ def submit_comment(lang, slug):
         flash(msg('error_generic', 'Unable to submit your comment right now.'), 'error')
 
     return redirect(url_for('post_detail', lang=lang, slug=slug) + '#comments')
+
+
+@app.route('/<lang>/post/<slug>/react', methods=['POST'])
+@limiter.limit('10 per minute')
+def submit_reaction(lang, slug):
+    """Handle helpful/not_helpful reactions for posts."""
+    if lang not in LANGUAGES:
+        abort(404)
+
+    g.language = lang
+    reaction_type = request.form.get('reaction_type')
+    
+    if reaction_type not in ('helpful', 'not_helpful'):
+        return jsonify({'success': False, 'error': 'Invalid reaction type'}), 400
+
+    db = get_db()
+    now_iso = datetime.now().isoformat()
+    post = db.execute('''
+        SELECT id FROM posts 
+        WHERE language = ? AND slug = ? AND status = 'published' AND publish_date <= ?
+    ''', (lang, slug, now_iso)).fetchone()
+
+    if not post:
+        return jsonify({'success': False, 'error': 'Post not found'}), 404
+
+    # Get user's IP address
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip_address and ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+
+    try:
+        # Check if user already voted on this post
+        existing = db.execute(
+            'SELECT reaction_type FROM reactions WHERE post_id = ? AND ip_address = ?',
+            (post['id'], ip_address)
+        ).fetchone()
+
+        if existing:
+            # Update existing reaction if different
+            if existing['reaction_type'] != reaction_type:
+                db.execute(
+                    'UPDATE reactions SET reaction_type = ?, created_at = ? WHERE post_id = ? AND ip_address = ?',
+                    (reaction_type, now_iso, post['id'], ip_address)
+                )
+                db.commit()
+        else:
+            # Insert new reaction
+            db.execute(
+                'INSERT INTO reactions (post_id, reaction_type, ip_address, created_at) VALUES (?, ?, ?, ?)',
+                (post['id'], reaction_type, ip_address, now_iso)
+            )
+            db.commit()
+
+        # Get updated counts
+        counts = get_reaction_counts(post['id'])
+        return jsonify({'success': True, 'counts': counts})
+
+    except Exception as e:
+        print(f"Error saving reaction: {e}")
+        return jsonify({'success': False, 'error': 'Unable to save reaction'}), 500
+
+
+def get_reaction_counts(post_id):
+    """Get reaction counts for a post."""
+    db = get_db()
+    helpful = db.execute(
+        'SELECT COUNT(*) as count FROM reactions WHERE post_id = ? AND reaction_type = ?',
+        (post_id, 'helpful')
+    ).fetchone()['count']
+    
+    not_helpful = db.execute(
+        'SELECT COUNT(*) as count FROM reactions WHERE post_id = ? AND reaction_type = ?',
+        (post_id, 'not_helpful')
+    ).fetchone()['count']
+    
+    return {'helpful': helpful, 'not_helpful': not_helpful}
+
+
+def get_user_reaction(post_id, ip_address):
+    """Get user's reaction for a post (if any)."""
+    db = get_db()
+    reaction = db.execute(
+        'SELECT reaction_type FROM reactions WHERE post_id = ? AND ip_address = ?',
+        (post_id, ip_address)
+    ).fetchone()
+    
+    return reaction['reaction_type'] if reaction else None
 
 
 @app.route('/<lang>/post/<slug>/amp')
