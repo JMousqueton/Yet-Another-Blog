@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, make_response, redirect, url_for, g, Response, session, flash, abort, jsonify
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from feedgen.feed import FeedGenerator
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.security import check_password_hash
@@ -567,7 +567,7 @@ def update_scheduled_posts():
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         print(f"⏰ Scheduler check (UTC) at {now}")
         
         # Fetch scheduled posts that need to be published
