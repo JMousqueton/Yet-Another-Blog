@@ -257,9 +257,6 @@ def set_setting(key, value):
             ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=?
         ''', (key, value, datetime.now().isoformat(), datetime.now().isoformat()))
         db.commit()
-        
-        # Invalidate cache so it reloads on next get_setting() call
-        SETTINGS_CACHE_TIMESTAMP = 0
         return True
     except Exception as e:
         print(f"Error setting: {e}")
@@ -1336,6 +1333,9 @@ def submit_reaction(lang, slug):
                 db.execute(
                     'UPDATE reactions SET reaction_type = ?, created_at = ? WHERE post_id = ? AND ip_address = ?',
                     (reaction_type, now_iso, post['id'], ip_address)
+                )
+                db.commit()
+        else:
             # Insert new reaction
             db.execute(
                 'INSERT INTO reactions (post_id, reaction_type, ip_address, created_at) VALUES (?, ?, ?, ?)',
