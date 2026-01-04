@@ -180,19 +180,21 @@
                         </h5>
                         {% if post.author %}
                         <p class="mb-3"><strong>{{ post.author }}</strong></p>
-                        <p class="author-byline">
+                        <div class="author-byline">
                             {% if author %}
-                                {% if lang == 'en' %}{{ author.bio_en or t.post.author_fallback_bio }}
-                                {% elif lang == 'fr' %}{{ author.bio_fr or t.post.author_fallback_bio }}
-                                {% else %}{{ author.bio_de or t.post.author_fallback_bio }}
+                                {% if lang == 'en' %}{{ (author.bio_en or t.post.author_fallback_bio)|markdown|safe }}
+                                {% elif lang == 'fr' %}{{ (author.bio_fr or t.post.author_fallback_bio)|markdown|safe }}
+                                {% else %}{{ (author.bio_de or t.post.author_fallback_bio)|markdown|safe }}
                                 {% endif %}
                             {% else %}
-                                {{ t.post.author_fallback_bio }}
+                                {{ t.post.author_fallback_bio|markdown|safe }}
                             {% endif %}
+                            <p>
                             <a href="/{{ lang }}/author/{{ post.author|replace(' ', '-') }}" class="text-decoration-none">
                                 {{ t.post.view_all_posts }}
                             </a>.
-                        </p>
+                            </p>
+                        </div>
                         {% endif %}
                     </div>
                 </div>

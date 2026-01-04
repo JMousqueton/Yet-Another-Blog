@@ -47,12 +47,12 @@
                 </div>
                 <div class="col-md-9">
                     <h1 class="fw-bold mb-3">{{ author.name }}</h1>
-                    <p class="author-bio">
-                        {% if lang == 'en' %}{{ author.bio_en }}
-                        {% elif lang == 'fr' %}{{ author.bio_fr }}
-                        {% else %}{{ author.bio_de }}
+                    <div class="author-bio">
+                        {% if lang == 'en' %}{{ author.bio_en|markdown|safe }}
+                        {% elif lang == 'fr' %}{{ author.bio_fr|markdown|safe }}
+                        {% else %}{{ author.bio_de|markdown|safe }}
                         {% endif %}
-                    </p>
+                    </div>
                     
                     <!-- Author Social Links -->
                     {% if author.email or author.twitter or author.linkedin or author.github or author.website %}
