@@ -237,6 +237,13 @@
                     {{ t.footer.subscribe_rss }}
                 </a>
             </p>
+            {% if disclaimer_page %}
+            <p class="mt-2">
+                <a href="{{ disclaimer_page.url }}" class="text-white text-decoration-none">
+                    <i class="fas fa-scale-balanced"></i> {{ t.footer.disclaimer or 'Disclaimer' }}
+                </a>
+            </p>
+            {% endif %}
         </div>
     </footer>
     

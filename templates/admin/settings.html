@@ -417,6 +417,26 @@ textarea.form-control {
                             </label>
                             <small class="form-text text-muted d-block mt-2">Allow visitors to leave comments on posts</small>
                         </div>
+
+                        <div class="form-section-title">
+                            <i class="fas fa-scale-balanced"></i> Disclaimer Page
+                        </div>
+                        <p class="text-muted">Select which published page to use as the disclaimer link for each enabled language.</p>
+
+                        {% for code, info in languages.items() %}
+                        {% if settings.get('enabled_lang_' ~ code, 'on') == 'on' %}
+                        <div class="mb-3">
+                            <label class="form-label">{{ info.flag }} {{ info.name }}</label>
+                            <select class="form-select" name="disclaimer_page_{{ code }}">
+                                <option value="">No disclaimer</option>
+                                {% for page in pages_by_language.get(code, []) %}
+                                <option value="{{ page['slug'] }}" {% if settings.get('disclaimer_page_' ~ code, '') == page['slug'] %}selected{% endif %}>{{ page['title'] }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">If set, a footer link will point to this page for {{ info.name }}.</small>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
                     </div>
                     
                     <!-- Analytics & Tracking Tab -->

@@ -260,6 +260,28 @@ def set_setting(key, value):
         print(f"Error setting: {e}")
         return False
 
+def get_disclaimer_page(lang):
+    """Return published disclaimer page info for a language if configured."""
+    slug = get_setting(f'disclaimer_page_{lang}', '')
+    if not slug:
+        return None
+    try:
+        db = get_db()
+        page = db.execute('''
+            SELECT title, slug
+            FROM pages
+            WHERE language = ? AND slug = ? AND status = 'published'
+        ''', (lang, slug)).fetchone()
+        if page:
+            return {
+                'title': page['title'],
+                'slug': page['slug'],
+                'url': url_for('page_detail', lang=lang, slug=page['slug'])
+            }
+    except Exception as e:
+        print(f"Error fetching disclaimer page for {lang}: {e}")
+    return None
+
 @app.context_processor
 def inject_global_settings():
     """Inject commonly used settings and translations into all templates."""
@@ -282,7 +304,8 @@ def inject_global_settings():
         'analytics_code': get_setting('analytics_code', ''),
         'blog_title': blog_title,
         't': translations,
-        'lang': current_lang  # Ensure lang is always available in templates
+        'lang': current_lang,  # Ensure lang is always available in templates
+        'disclaimer_page': get_disclaimer_page(current_lang)
     }
 
 def get_enabled_languages():
@@ -2627,6 +2650,9 @@ def admin_settings():
                 'enabled_lang_en': 'on' if request.form.get('enabled_lang_en') == 'on' else 'off',
                 'enabled_lang_fr': 'on' if request.form.get('enabled_lang_fr') == 'on' else 'off',
                 'enabled_lang_de': 'on' if request.form.get('enabled_lang_de') == 'on' else 'off',
+                'disclaimer_page_en': request.form.get('disclaimer_page_en', ''),
+                'disclaimer_page_fr': request.form.get('disclaimer_page_fr', ''),
+                'disclaimer_page_de': request.form.get('disclaimer_page_de', ''),
             }
             
             for key, value in settings_map.items():
@@ -2665,8 +2691,15 @@ def admin_settings():
     db = get_db()
     settings_rows = db.execute('SELECT key, value FROM settings').fetchall()
     settings = {row['key']: row['value'] for row in settings_rows}
+
+    pages_by_language = {}
+    for code in LANGUAGES:
+        pages_by_language[code] = db.execute(
+            "SELECT id, title, slug FROM pages WHERE language = ? AND status = 'published' ORDER BY title",
+            (code,)
+        ).fetchall()
     
-    return render_template('admin/settings.html', settings=settings, languages=LANGUAGES)
+    return render_template('admin/settings.html', settings=settings, languages=LANGUAGES, pages_by_language=pages_by_language)
 
 
 @app.route('/admin/api/export-database')

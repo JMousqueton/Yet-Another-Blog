@@ -44,7 +44,8 @@
   },
   "footer": {
     "all_rights_reserved": "Tous droits réservés.",
-    "subscribe_rss": "S'abonner via RSS"
+    "subscribe_rss": "S'abonner via RSS",
+    "disclaimer": "Mentions légales"
   },
   "locations": {
     "home": "Accueil",
