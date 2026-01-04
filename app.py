@@ -46,6 +46,11 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
 # Initialize CSRF Protection
 csrf = CSRFProtect(app)
 
+# Settings cache to reduce database queries
+SETTINGS_CACHE = {}
+SETTINGS_CACHE_TIMEOUT = 300  # 5 minutes
+SETTINGS_CACHE_TIMESTAMP = 0
+
 # Initialize Rate Limiter
 limiter = Limiter(
     get_remote_address,
@@ -239,16 +244,28 @@ def save_author_image(file, author_id):
         return None
 
 def get_setting(key, default=None):
-    """Get a setting value by key."""
-    try:
-        db = get_db()
-        setting = db.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchone()
-        return setting['value'] if setting else default
-    except Exception as e:
-        return default
+    """Get a setting value by key with caching."""
+    global SETTINGS_CACHE, SETTINGS_CACHE_TIMESTAMP
+    import time
+    
+    current_time = time.time()
+    
+    # Refresh cache if expired
+    if current_time - SETTINGS_CACHE_TIMESTAMP > SETTINGS_CACHE_TIMEOUT:
+        try:
+            db = get_db()
+            all_settings = db.execute('SELECT key, value FROM settings').fetchall()
+            SETTINGS_CACHE = {row['key']: row['value'] for row in all_settings}
+            SETTINGS_CACHE_TIMESTAMP = current_time
+        except Exception as e:
+            print(f"Error loading settings cache: {e}")
+            SETTINGS_CACHE = {}
+    
+    return SETTINGS_CACHE.get(key, default)
 
 def set_setting(key, value):
-    """Set a setting value."""
+    """Set a setting value and invalidate cache."""
+    global SETTINGS_CACHE_TIMESTAMP
     try:
         db = get_db()
         db.execute('''
@@ -257,6 +274,9 @@ def set_setting(key, value):
             ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=?
         ''', (key, value, datetime.now().isoformat(), datetime.now().isoformat()))
         db.commit()
+        
+        # Invalidate cache so it reloads on next get_setting() call
+        SETTINGS_CACHE_TIMESTAMP = 0
         return True
     except Exception as e:
         print(f"Error setting: {e}")
