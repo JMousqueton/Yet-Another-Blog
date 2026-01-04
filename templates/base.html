@@ -317,7 +317,13 @@
             // Only check cookie - it's the source of truth
             const hasCookie = getCookie('preferred_language');
             
-            if (!hasCookie) {
+            // Only show language modal on home page (check if we're on index page)
+            const isHomePage = !window.location.pathname.includes('/page/') && 
+                              !window.location.pathname.includes('/post/') &&
+                              !window.location.pathname.includes('/author/') &&
+                              !window.location.pathname.includes('/admin/');
+            
+            if (!hasCookie && isHomePage) {
                 const languageModal = new bootstrap.Modal(document.getElementById('languageModal'));
                 languageModal.show();
             }

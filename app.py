@@ -818,6 +818,8 @@ def post_detail(lang, slug):
     if lang not in enabled_languages:
         abort(404)
     
+    # Auto-set language cookie if not already set
+    has_language_cookie = request.cookies.get('preferred_language')
     g.language = lang
     meta_description = get_setting(f'blog_description_{lang}', get_setting('blog_description_en', ''))
     blog_title = get_setting(f'blog_title_{lang}', get_setting('blog_title', 'My Blog'))
@@ -877,7 +879,7 @@ def post_detail(lang, slug):
     except Exception as e:
         print(f"Error tracking view: {e}")
     
-    return render_template('post.html', 
+    response = make_response(render_template('post.html', 
                          post=post, 
                          author=author_info,
                          prev_post=prev_post,
@@ -891,7 +893,14 @@ def post_detail(lang, slug):
                          meta_type='article',
                          template_css=template_css,
                          blog_title=blog_title,
-                         blog_subtitle=blog_subtitle)
+                         blog_subtitle=blog_subtitle))
+    
+    # Set language cookie if not already set
+    if not has_language_cookie:
+        response.set_cookie('preferred_language', lang, max_age=365*24*60*60)  # 1 year
+    
+    return response
+
 
 @app.route('/<lang>/post/<slug>/amp')
 def post_detail_amp(lang, slug):
