@@ -3728,6 +3728,9 @@ def admin_about():
         {"icon": "fa-database", "title": "Data Safety", "text": "Export/import scripts, scheduled publishing, and backups."},
         {"icon": "fa-pen", "title": "Authoring", "text": "WYSIWYG editor, featured posts, drafts/scheduled posts, and media."},
         {"icon": "fa-rss", "title": "Reach", "text": "Per-language RSS, SEO metadata, sitemaps, and social sharing."},
+        {"icon": "fa-comments", "title": "Comments Moderation", "text": "Bulk and single comment approval, deletion, and anti-spam features."},
+        {"icon": "fa-envelope", "title": "Contact Messages", "text": "Admin inbox for user messages, mark as read/unread, and delete."},
+        {"icon": "fa-chart-bar", "title": "Statistics", "text": "Admin dashboard with post, comment, and author stats."},
     ]
     return render_template('admin/about.html', repo_url=repo_url, highlights=highlights)
 
