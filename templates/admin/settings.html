@@ -187,6 +187,16 @@ textarea.form-control {
                                           maxlength="160">{{ settings.get('blog_description_en', '') }}</textarea>
                                 <small class="form-text text-muted">Used for SEO meta description (max 160 characters)</small>
                             </div>
+                            <div class="mt-3">
+                                <label for="meta_keywords_en" class="form-label">Meta Keywords</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="meta_keywords_en" 
+                                       name="meta_keywords_en" 
+                                       value="{{ settings.get('meta_keywords_en', '') }}"
+                                       placeholder="blog, technology, programming">
+                                <small class="form-text text-muted">Comma-separated keywords for SEO</small>
+                            </div>
                         </div>
                         {% endif %}
 
@@ -222,6 +232,16 @@ textarea.form-control {
                                           maxlength="160">{{ settings.get('blog_description_fr', '') }}</textarea>
                                 <small class="form-text text-muted">Utilisé pour la méta description SEO (160 caractères max)</small>
                             </div>
+                            <div class="mt-3">
+                                <label for="meta_keywords_fr" class="form-label">Mots-clés Meta</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="meta_keywords_fr" 
+                                       name="meta_keywords_fr" 
+                                       value="{{ settings.get('meta_keywords_fr', '') }}"
+                                       placeholder="blog, technologie, programmation">
+                                <small class="form-text text-muted">Mots-clés séparés par des virgules pour le référencement</small>
+                            </div>
                         </div>
                         {% endif %}
 
@@ -256,6 +276,16 @@ textarea.form-control {
                                           placeholder="Beschreiben Sie Ihren Blog..."
                                           maxlength="160">{{ settings.get('blog_description_de', '') }}</textarea>
                                 <small class="form-text text-muted">Für SEO-Meta-Beschreibung verwendet (max. 160 Zeichen)</small>
+                            </div>
+                            <div class="mt-3">
+                                <label for="meta_keywords_de" class="form-label">Meta-Schlüsselwörter</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="meta_keywords_de" 
+                                       name="meta_keywords_de" 
+                                       value="{{ settings.get('meta_keywords_de', '') }}"
+                                       placeholder="blog, technologie, programmierung">
+                                <small class="form-text text-muted">Durch Kommas getrennte Schlüsselwörter für SEO</small>
                             </div>
                         </div>
                         {% endif %}
