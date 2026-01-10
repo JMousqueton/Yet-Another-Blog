@@ -20,6 +20,9 @@
     {% if post.author %}
     <meta property="article:author" content="{{ post.author }}">
     {% endif %}
+    <meta property="og:logo" content="{{ url_for('static', filename='logo.png', _external=True) }}" size="150x150" />
+    <meta property="og:logo" content="{{ url_for('static', filename='logo.png', _external=True) }}" size="250x250" />
+    <meta property="og:logo" content="{{ url_for('static', filename='logo.png', _external=True) }}" size="500x500" />
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
