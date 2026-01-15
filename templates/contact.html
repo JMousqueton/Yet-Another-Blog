@@ -29,6 +29,11 @@
                                 <p class="text-muted mb-0">{{ t.contact.intro if t.contact else 'Have a question or feedback? Drop a note below.' }}</p>
                             </div>
                         </div>
+                        <div class="d-flex align-items-center mb-3">
+                        <div class="alert alert-warning mt-3" role="alert">
+                            {{ t.contact.no_ads if t.contact and t.contact.no_ads else 'No ad or traffic solicitation. Such messages will be deleted without response.' }}
+                        </div>
+                        </div>
 
                         <form method="POST" action="{{ url_for('contact', lang=lang) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />

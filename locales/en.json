@@ -71,6 +71,7 @@
     "captcha_label": "Anti-spam:",
     "captcha_placeholder": "Enter the result in figures (e.g. 10, 12)",
     "captcha_numbers": ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
+    ,"no_ads": "No ad or traffic solicitation. Such messages will be deleted without response."
   },
   "comments": {
     "title": "Comments",

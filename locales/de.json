@@ -72,6 +72,7 @@
       "captcha_label": "Anti-Spam:",
       "captcha_placeholder": "Geben Sie das Ergebnis als Zahl ein (z. B. 10, 12)",
       "captcha_numbers": ["Null", "Eins", "Zwei", "Drei", "Vier", "Fuenf", "Sechs", "Sieben", "Acht", "Neun"]
+    ,"no_ads": "Keine Werbe- oder Traffic-Anfragen. Solche Nachrichten werden ohne Antwort gelöscht."
   },
     "comments": {
       "title": "Kommentare",
