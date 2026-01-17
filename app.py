@@ -3139,6 +3139,13 @@ def admin_media():
                     'size': file_size_kb,
                     'date': file_date
                 }
+                if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                    try:
+                        from PIL import Image
+                        with Image.open(filepath) as img:
+                            media['resolution'] = f"{img.width}x{img.height}"
+                    except Exception as img_e:
+                        print(f"Error reading image resolution: {img_e}")
                 if filename.lower().endswith('.pdf'):
                     meta_path = filepath + '.meta.json'
                     if os.path.exists(meta_path):

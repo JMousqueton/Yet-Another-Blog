@@ -127,7 +127,7 @@
         {% if media_files %}
         <div class="media-gallery">
             {% for media in media_files %}
-            <div class="media-item">
+            <div class="media-item d-flex flex-column" style="height:100%;">
                 {% if media.filename.lower().endswith('.pdf') %}
                     <div style="display: flex; align-items: center; justify-content: center; height: 200px; background: #f0f0f0;">
                         <i class="fas fa-file-pdf fa-4x text-danger"></i>
@@ -135,20 +135,22 @@
                 {% else %}
                     <img src="{{ media.url }}" alt="{{ media.filename }}" class="media-item-image">
                 {% endif %}
-                <div class="media-item-info">
+                <div class="media-item-info d-flex flex-column" style="flex:1 1 auto;">
                     <div class="media-item-filename" title="{{ media.filename }}">{{ media.filename }}</div>
-                    <div class="media-item-size">{{ media.size }} KB</div>
+                    <div class="media-item-size" style="margin-bottom:0;"><i class="fas fa-weight-hanging"></i> {{ media.size }} KB</div>{% if media.resolution %}<div class="media-item-resolution" style="color: #999; font-size: 0.75rem;"><i class="fas fa-expand-arrows-alt"></i> {{ media.resolution }} px</div>{% endif %}
                     <div class="media-item-date"><i class="fas fa-calendar"></i> {{ media.date }}</div>
                     {% if media.pdf_meta %}
-                        <div class="media-item-pdf-meta mt-2">
-                            <ul class="mb-1" style="font-size:0.85em;">
-                                {% if media.pdf_meta.title %}<li><strong>Title:</strong> {{ media.pdf_meta.title }}</li>{% endif %}
-                                {% if media.pdf_meta.author %}<li><strong>Author:</strong> {{ media.pdf_meta.author }}</li>{% endif %}
-                                <li><strong>Pages:</strong> {{ media.pdf_meta.num_pages }}</li>
-                            </ul>
+                        <div class="media-item-pdf-title" style="color: #999; font-size: 0.75rem;">
+                            <i class="fas fa-font"></i> {{ media.pdf_meta.title if media.pdf_meta.title else 'N/A' }}
                         </div>
+                        {% if media.pdf_meta.num_pages is defined %}
+                            <div class="media-item-pdf-pages" style="color: #999; font-size: 0.75rem;">
+                                <i class="fas fa-file-alt"></i> {{ media.pdf_meta.num_pages }} page{% if media.pdf_meta.num_pages != 1 %}s{% endif %}
+                            </div>
+                            <hr style="border: none; border-top: 1px solid #fff; margin: 4px 0;" />
+                        {% endif %}
                     {% endif %}
-                    <div class="media-item-actions">
+                    <div class="media-item-actions mt-auto">
                         <button type="button" 
                                 class="btn btn-sm btn-outline-primary" 
                                 onclick="copyToClipboard('{{ media.url }}')">
