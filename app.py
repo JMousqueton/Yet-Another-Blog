@@ -1089,7 +1089,9 @@ def index(lang, page=1):
                          meta_type='website',
                          template_css=template_css,
                          blog_title=blog_title,
-                         blog_subtitle=blog_subtitle)
+                         blog_subtitle=blog_subtitle,
+                         max=max,
+                         min=min)
 
 @app.route('/<lang>/post/<slug>')
 def post_detail(lang, slug):
