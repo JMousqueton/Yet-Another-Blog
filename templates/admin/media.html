@@ -139,6 +139,19 @@
                     <div class="media-item-filename" title="{{ media.filename }}">{{ media.filename }}</div>
                     <div class="media-item-size">{{ media.size }} KB</div>
                     <div class="media-item-date"><i class="fas fa-calendar"></i> {{ media.date }}</div>
+                    {% if media.pdf_meta %}
+                        <div class="media-item-pdf-meta mt-2">
+                            <strong>PDF Metadata:</strong>
+                            <ul class="mb-1" style="font-size:0.85em;">
+                                {% if media.pdf_meta.title %}<li><strong>Title:</strong> {{ media.pdf_meta.title }}</li>{% endif %}
+                                {% if media.pdf_meta.author %}<li><strong>Author:</strong> {{ media.pdf_meta.author }}</li>{% endif %}
+                                {% if media.pdf_meta.subject %}<li><strong>Subject:</strong> {{ media.pdf_meta.subject }}</li>{% endif %}
+                                {% if media.pdf_meta.creator %}<li><strong>Creator:</strong> {{ media.pdf_meta.creator }}</li>{% endif %}
+                                {% if media.pdf_meta.producer %}<li><strong>Producer:</strong> {{ media.pdf_meta.producer }}</li>{% endif %}
+                                <li><strong>Pages:</strong> {{ media.pdf_meta.num_pages }}</li>
+                            </ul>
+                        </div>
+                    {% endif %}
                     <div class="media-item-actions">
                         <button type="button" 
                                 class="btn btn-sm btn-outline-primary" 
