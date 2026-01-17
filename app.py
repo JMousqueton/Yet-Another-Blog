@@ -3091,7 +3091,28 @@ def admin_media():
                         flash('Image uploaded successfully!', 'success')
                     elif ext == 'pdf':
                         file.save(filepath)
-                        flash('PDF uploaded successfully!', 'success')
+                        # Extract PDF metadata
+                        try:
+                            from PyPDF2 import PdfReader
+                            reader = PdfReader(filepath)
+                            info = reader.metadata or {}
+                            num_pages = len(reader.pages)
+                            meta = {
+                                'title': info.title if info.title else '',
+                                'author': info.author if info.author else '',
+                                'subject': info.subject if info.subject else '',
+                                'creator': info.creator if info.creator else '',
+                                'producer': info.producer if info.producer else '',
+                                'num_pages': num_pages
+                            }
+                            import json
+                            with open(filepath + '.meta.json', 'w') as metafile:
+                                json.dump(meta, metafile)
+                            flash('PDF uploaded successfully!', 'success')
+                        except Exception as meta_e:
+                            error_msg = f"Error extracting PDF metadata: {meta_e}"
+                            print(error_msg)
+                            flash(error_msg, 'error')
                     else:
                         flash('Unsupported file type.', 'error')
                 except Exception as e:
@@ -3103,7 +3124,10 @@ def admin_media():
     try:
         if os.path.exists(uploads_dir):
             import json
+            allowed_exts = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf')
             for filename in os.listdir(uploads_dir):
+                if not filename.lower().endswith(allowed_exts):
+                    continue
                 filepath = os.path.join(uploads_dir, filename)
                 file_size = os.path.getsize(filepath)
                 file_size_kb = round(file_size / 1024, 2)
