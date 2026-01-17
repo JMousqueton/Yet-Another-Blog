@@ -193,7 +193,7 @@ load_translations()
 
 # File upload configuration
 UPLOAD_FOLDER = os.path.join('static', 'authors')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'}
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 
 # Create upload folders if they don't exist
@@ -3073,46 +3073,58 @@ def admin_media():
         if 'media_file' in request.files:
             file = request.files['media_file']
             if file and file.filename:
+                ext = file.filename.rsplit('.', 1)[1].lower()
                 try:
                     filename = secure_filename(f"media_{datetime.now().timestamp()}_{file.filename}")
                     filepath = os.path.join(uploads_dir, filename)
-                    
-                    # Save and optimize image
-                    img = Image.open(file.stream)
-                    # Convert RGBA to RGB if necessary
-                    if img.mode == 'RGBA':
-                        img = img.convert('RGB')
-                    # Resize to max 1200px width while maintaining aspect ratio
-                    max_width = 1200
-                    if img.width > max_width:
-                        ratio = max_width / img.width
-                        new_height = int(img.height * ratio)
-                        img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                    img.save(filepath, 'JPEG', quality=85, optimize=True)
-                    
-                    flash('Image uploaded successfully!', 'success')
+                    if ext in {'jpg', 'jpeg', 'png', 'gif', 'webp'}:
+                        # Save and optimize image
+                        img = Image.open(file.stream)
+                        if img.mode == 'RGBA':
+                            img = img.convert('RGB')
+                        max_width = 1200
+                        if img.width > max_width:
+                            ratio = max_width / img.width
+                            new_height = int(img.height * ratio)
+                            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+                        img.save(filepath, 'JPEG', quality=85, optimize=True)
+                        flash('Image uploaded successfully!', 'success')
+                    elif ext == 'pdf':
+                        file.save(filepath)
+                        flash('PDF uploaded successfully!', 'success')
+                    else:
+                        flash('Unsupported file type.', 'error')
                 except Exception as e:
-                    flash(f'Error uploading image: {str(e)}', 'error')
+                    flash(f'Error uploading file: {str(e)}', 'error')
             return redirect(url_for('admin_media'))
     
     # Get all media files
     media_files = []
     try:
         if os.path.exists(uploads_dir):
+            import json
             for filename in os.listdir(uploads_dir):
-                if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
-                    filepath = os.path.join(uploads_dir, filename)
-                    file_size = os.path.getsize(filepath)
-                    file_size_kb = round(file_size / 1024, 2)
-                    # Get file modification time
-                    file_mtime = os.path.getmtime(filepath)
-                    file_date = datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d %H:%M:%S')
-                    media_files.append({
-                        'filename': filename,
-                        'url': url_for('static', filename=f'uploads/{filename}'),
-                        'size': file_size_kb,
-                        'date': file_date
-                    })
+                filepath = os.path.join(uploads_dir, filename)
+                file_size = os.path.getsize(filepath)
+                file_size_kb = round(file_size / 1024, 2)
+                file_mtime = os.path.getmtime(filepath)
+                file_date = datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                media = {
+                    'filename': filename,
+                    'url': url_for('static', filename=f'uploads/{filename}'),
+                    'size': file_size_kb,
+                    'date': file_date
+                }
+                if filename.lower().endswith('.pdf'):
+                    meta_path = filepath + '.meta.json'
+                    if os.path.exists(meta_path):
+                        try:
+                            with open(meta_path, 'r') as metafile:
+                                meta = json.load(metafile)
+                            media['pdf_meta'] = meta
+                        except Exception as meta_e:
+                            print(f"Error reading PDF metadata: {meta_e}")
+                media_files.append(media)
             # Sort by date (newest first)
             media_files.sort(key=lambda x: x['filename'], reverse=True)
     except Exception as e:
