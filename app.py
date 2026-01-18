@@ -873,14 +873,11 @@ def update_scheduled_posts():
         # Send email notifications to authors
         if posts_updated > 0:
             print(f"✅ Updated {posts_updated} scheduled post(s) to published at {now}")
-            
             # Get base URL from environment or use default
             base_url = os.getenv('BASE_URL', 'http://localhost:5001')
-            
             for post in posts_to_publish:
                 if post['email']:
                     post_url = f"{base_url}/{post['language']}/post/{post['slug']}"
-                    
                     subject = f"Your post '{post['title']}' has been published"
                     body = f"""
                     <html>
@@ -888,16 +885,33 @@ def update_scheduled_posts():
                         <h2>Post Published</h2>
                         <p>Hello {post['author_name']},</p>
                         <p>Your scheduled post <strong>{post['title']}</strong> has been automatically published.</p>
-                        <p><a href="{post_url}">View your post</a></p>
+                        <p><a href=\"{post_url}\">View your post</a></p>
                         <br>
                         <p>Best regards,<br>{app.config['APP_NAME']}</p>
                       </body>
                     </html>
                     """
-                    
                     send_email(post['email'], subject, body)
         else:
             print(f"⏰ No scheduled posts to publish at {now}")
+
+        # Print future scheduled posts (not yet ready to publish)
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT title, author, publish_date FROM posts
+            WHERE status = 'scheduled' AND datetime(publish_date) > datetime('now')
+            ORDER BY publish_date ASC
+        ''')
+        future_posts = cursor.fetchall()
+        if future_posts:
+            print("\n📅 Future scheduled posts:")
+            for post in future_posts:
+                print(f"  - {post['title']} (by {post['author']}, {post['publish_date']})")
+            print()
+        else:
+            print("📅 No future scheduled posts.")
 
         if pages_updated > 0:
             print(f"✅ Updated {pages_updated} scheduled page(s) to published at {now}")
@@ -2164,18 +2178,32 @@ def admin_dashboard():
     scheduled_posts = db.execute("SELECT COUNT(*) as count FROM posts WHERE status = 'scheduled'").fetchone()['count']
     recent_posts = db.execute("SELECT * FROM posts ORDER BY created_at DESC LIMIT 10").fetchall()
 
+    # Get future scheduled posts (publish_date > now)
+    now = datetime.now(timezone.utc).isoformat()
+    future_scheduled = db.execute(
+        "SELECT title, slug, language, author, publish_date FROM posts WHERE status = 'scheduled' AND datetime(publish_date) > datetime('now') ORDER BY publish_date ASC"
+    ).fetchall()
+
+    # Print future scheduled posts to the console
+    if future_scheduled:
+        print("\n📅 Future scheduled posts:")
+        for post in future_scheduled:
+            print(f"  - {post['title']} (by {post['author']}, {post['publish_date']})")
+        print()
+
     posts_with_reading_time = []
     for post in recent_posts:
         post_dict = dict(post)
         post_dict['reading_time'] = calculate_reading_time(post_dict['content'])
         posts_with_reading_time.append(post_dict)
-    
+
     return render_template('admin/dashboard.html',
                          total_posts=total_posts,
                          published_posts=published_posts,
                          draft_posts=draft_posts,
                          scheduled_posts=scheduled_posts,
                          recent_posts=posts_with_reading_time,
+                         future_scheduled=future_scheduled,
                          is_admin_user=session.get('is_admin'))
 
 @app.route('/admin/posts')
