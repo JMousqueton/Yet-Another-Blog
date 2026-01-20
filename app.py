@@ -448,6 +448,8 @@ def get_traffic_sources(days=30):
             sources['Bluesky'] += row['count']
         elif 'yandex.ru' in referrer.lower() or 'yandex.com' in referrer.lower():
             sources['Yandex'] += row['count']
+        elif 'ecosia.org' in referrer.lower():
+            sources['Ecosia'] += row['count']
         elif 'duckduckgo' in referrer.lower():
             sources['DuckDuckGo'] += row['count']
         elif 'baidu' in referrer.lower():

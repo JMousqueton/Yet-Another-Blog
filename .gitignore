@@ -9,7 +9,7 @@ venv/
 .DS_Store
 .vscode/
 *.log
-blog.db.OLD
+blog.*
 static/uploads/*.png
 static/uploads/*.jpeg
 static/authors/*.png
