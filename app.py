@@ -1634,6 +1634,7 @@ def contact(lang):
     success_msg = t_contact.get('success', 'Message sent! We will get back to you soon.')
     error_generic = t_contact.get('error_generic', 'Error sending message.')
     error_captcha = t_contact.get('error_captcha', 'Captcha is incorrect. Please try again.')
+    error_promotional_check = t_contact.get('error_promotional_check', 'Please confirm this is not a promotional message.')
 
     def new_captcha():
         prompt, answer = generate_captcha(lang)
@@ -1650,13 +1651,21 @@ def contact(lang):
         subject = request.form.get('subject', '').strip()
         message = request.form.get('message', '').strip()
         captcha_input = request.form.get('captcha_answer', '').strip()
+        promotional_check = request.form.get('promotional_check', '').strip()
         expected = session.get('captcha_answer')
+
+        # Define valid answers based on language
+        valid_answers = {'en': 'YES', 'fr': 'OUI', 'de': 'JA'}
+        expected_answer = valid_answers.get(lang, 'YES')
 
         if not (captcha_input.isdigit() and expected is not None and int(captcha_input) == expected):
             flash(error_captcha, 'error')
             captcha_prompt = new_captcha()
         elif not all([name, email, message]):
             flash(error_required, 'error')
+            captcha_prompt = new_captcha()
+        elif promotional_check.upper() != expected_answer:
+            flash(error_promotional_check, 'error')
             captcha_prompt = new_captcha()
         else:
             try:

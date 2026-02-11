@@ -70,8 +70,11 @@
     "error_captcha": "Captcha is incorrect. Please try again.",
     "captcha_label": "Anti-spam:",
     "captcha_placeholder": "Enter the result in figures (e.g. 10, 12)",
-    "captcha_numbers": ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
-    ,"no_ads": "No ad or traffic solicitation. Such messages will be deleted without response."
+    "captcha_numbers": ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"],
+    "no_ads": "No ad or traffic solicitation. Such messages will be deleted without response.",
+    "confirm_not_promotional": "I confirm this message is not promotional",
+    "confirm_not_promotional_placeholder": "Write YES",
+    "error_promotional_check": "Please confirm this is not a promotional message by writing YES."
   },
   "comments": {
     "title": "Comments",

@@ -71,8 +71,11 @@
       "error_captcha": "Captcha ist falsch. Bitte erneut versuchen.",
       "captcha_label": "Anti-Spam:",
       "captcha_placeholder": "Geben Sie das Ergebnis als Zahl ein (z. B. 10, 12)",
-      "captcha_numbers": ["Null", "Eins", "Zwei", "Drei", "Vier", "Fuenf", "Sechs", "Sieben", "Acht", "Neun"]
-    ,"no_ads": "Keine Werbe- oder Traffic-Anfragen. Solche Nachrichten werden ohne Antwort gelöscht."
+      "captcha_numbers": ["Null", "Eins", "Zwei", "Drei", "Vier", "Fuenf", "Sechs", "Sieben", "Acht", "Neun"],
+    "no_ads": "Keine Werbe- oder Traffic-Anfragen. Solche Nachrichten werden ohne Antwort gelöscht.",
+    "confirm_not_promotional": "Ich bestätige, dass diese Nachricht nicht werblich ist",
+    "confirm_not_promotional_placeholder": "Schreiben Sie JA",
+    "error_promotional_check": "Bitte bestätigen Sie, dass dies keine Werbenachricht ist, indem Sie JA schreiben."
   },
     "comments": {
       "title": "Kommentare",

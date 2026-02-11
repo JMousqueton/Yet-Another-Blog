@@ -58,6 +58,10 @@
                                     <label class="form-label fw-semibold">{{ t.contact.captcha_label if t.contact else 'Anti-spam check' }} <span class="text-muted">{{ captcha_prompt }}</span></label>
                                     <input type="text" name="captcha_answer" class="form-control" placeholder="{{ t.contact.captcha_placeholder if t.contact else 'Enter the result' }}" required>
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">{{ t.contact.confirm_not_promotional if t.contact else 'I confirm this message is not promotional' }}</label>
+                                    <input type="text" name="promotional_check" class="form-control" placeholder="{{ t.contact.confirm_not_promotional_placeholder if t.contact else 'Write YES' }}" required>
+                                </div>
                             </div>
                             <div class="d-grid d-sm-flex gap-3 mt-4 align-items-center">
                                 <button type="submit" class="btn btn-primary btn-lg">

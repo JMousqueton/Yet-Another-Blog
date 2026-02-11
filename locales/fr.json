@@ -71,8 +71,11 @@
     "error_captcha": "Le captcha est incorrect. Merci de réessayer.",
     "captcha_label": "Anti-spam :",
     "captcha_placeholder": "Entrez le résultat en chiffres (ex : 10, 12)",
-    "captcha_numbers": ["Zéro", "Un", "Deux", "Trois", "Quatre", "Cinq", "Six", "Sept", "Huit", "Neuf"]
-    ,"no_ads": "Aucune sollicitation publicitaire ou de trafic. Ces messages seront supprimés sans réponse."
+    "captcha_numbers": ["Zéro", "Un", "Deux", "Trois", "Quatre", "Cinq", "Six", "Sept", "Huit", "Neuf"],
+    "no_ads": "Aucune sollicitation publicitaire ou de trafic. Ces messages seront supprimés sans réponse.",
+    "confirm_not_promotional": "Je confirme que ce message n'est pas promotionnel",
+    "confirm_not_promotional_placeholder": "Écrire OUI",
+    "error_promotional_check": "Veuillez confirmer qu'il ne s'agit pas d'un message promotionnel en écrivant OUI."
   },
   "comments": {
     "title": "Commentaires",
