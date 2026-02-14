@@ -1145,6 +1145,7 @@ def post_detail(lang, slug):
     # Calculate reading time
     post = dict(post)
     post['reading_time'] = calculate_reading_time(post['content'])
+    post['view_count'] = get_post_view_count(post['id'])
     page_meta_description = post.get('excerpt') or meta_description
     meta_title = f"{post['title']} - {blog_title}" if blog_title else post['title']
     meta_image = url_for('static', filename=f"uploads/{post['featured_image']}", _external=True) if post.get('featured_image') else None
