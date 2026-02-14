@@ -41,18 +41,18 @@ log() {
 }
 
 error() {
-    echo -e "${RED}[ERROR]${NC} $1" >&2
-    [[ "$LOG" == "TRUE" ]] && echo "[ERROR] $1" >> "$LOG_FILE" 2>/dev/null || true
+    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR]${NC} $1" >&2
+    [[ "$LOG" == "TRUE" ]] && echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $1" >> "$LOG_FILE" 2>/dev/null || true
 }
 
 success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-    [[ "$LOG" == "TRUE" ]] && echo "[SUCCESS] $1" >> "$LOG_FILE" 2>/dev/null || true
+    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] [SUCCESS]${NC} $1"
+    [[ "$LOG" == "TRUE" ]] && echo "[$(date +'%Y-%m-%d %H:%M:%S')] [SUCCESS] $1" >> "$LOG_FILE" 2>/dev/null || true
 }
 
 warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-    [[ "$LOG" == "TRUE" ]] && echo "[WARNING] $1" >> "$LOG_FILE" 2>/dev/null || true
+    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] [WARNING]${NC} $1"
+    [[ "$LOG" == "TRUE" ]] && echo "[$(date +'%Y-%m-%d %H:%M:%S')] [WARNING] $1" >> "$LOG_FILE" 2>/dev/null || true
 }
 
 # Check if git updates are available
