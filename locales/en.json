@@ -9,6 +9,7 @@
   },
   "post": {
     "min_read": "min read",
+    "views": "views",
     "author_label": "Author",
     "read_more": "Read More",
     "back_to_home": "Back to Home",

@@ -1039,6 +1039,7 @@ def index(lang, page=1):
         for post in featured_posts_raw:
             post_dict = dict(post)
             post_dict['reading_time'] = calculate_reading_time(post_dict['content'])
+            post_dict['view_count'] = get_post_view_count(post_dict['id'])
             featured_posts.append(post_dict)
     
     if search_query:
@@ -1078,11 +1079,12 @@ def index(lang, page=1):
     prev_page = page - 1 if has_prev else None
     next_page = page + 1 if has_next else None
     
-    # Add reading time to each post
+    # Add reading time and view count to each post
     posts_with_reading_time = []
     for post in posts:
         post_dict = dict(post)
         post_dict['reading_time'] = calculate_reading_time(post_dict['content'])
+        post_dict['view_count'] = get_post_view_count(post_dict['id'])
         posts_with_reading_time.append(post_dict)
     
     return render_template('index.html', 

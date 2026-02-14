@@ -110,6 +110,8 @@
                                 {% endif %}
                                 <span class="mx-1">|</span>
                                 <i class="far fa-clock"></i> {{ post.reading_time }} {{ t.post.min_read }}
+                                <span class="mx-1">|</span>
+                                <i class="far fa-eye"></i> {{ post.view_count }} {{ t.post.views }}
                             </div>
                             
                             {% if post.excerpt %}
@@ -148,11 +150,11 @@
                             </h2>
                             
                             <div class="post-meta mb-3">
-                                <i class="far fa-calendar"></i> 
+                                <i class="far fa-calendar"></i>
                                 {{ post.publish_date[:10] }}
                                 {% if post.author %}
                                 <span class="mx-2">|</span>
-                                <i class="far fa-user"></i> 
+                                <i class="far fa-user"></i>
                                 <a href="/{{ lang }}/author/{{ post.author|replace(' ', '-') }}" class="text-decoration-none">
                                     {{ post.author }}
                                 </a>
@@ -160,6 +162,9 @@
                                 <span class="mx-2">|</span>
                                 <i class="far fa-clock"></i>
                                 {{ post.reading_time }} {{ t.post.min_read }}
+                                <span class="mx-2">|</span>
+                                <i class="far fa-eye"></i>
+                                {{ post.view_count }} {{ t.post.views }}
                             </div>
                             
                             {% if post.excerpt %}
