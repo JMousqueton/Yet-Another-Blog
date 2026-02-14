@@ -55,6 +55,32 @@ warning() {
     [[ "$LOG" == "TRUE" ]] && echo "[WARNING] $1" >> "$LOG_FILE" 2>/dev/null || true
 }
 
+# Check if git updates are available
+check_git_updates() {
+    log "Checking for updates from git..."
+
+    # Fetch latest changes without modifying working directory
+    if ! git fetch origin 2>/dev/null; then
+        error "Failed to fetch from git remote"
+        return 2  # Return 2 for fetch error
+    fi
+
+    # Get current branch
+    local current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+    # Compare local and remote HEAD
+    local local_commit=$(git rev-parse HEAD)
+    local remote_commit=$(git rev-parse origin/"$current_branch" 2>/dev/null)
+
+    if [ "$local_commit" = "$remote_commit" ]; then
+        success "Already up to date (commit: ${local_commit:0:7})"
+        return 1  # Return 1 for no updates
+    else
+        success "Updates available (local: ${local_commit:0:7}, remote: ${remote_commit:0:7})"
+        return 0  # Return 0 for updates available
+    fi
+}
+
 # Check if sufficient disk space is available
 check_disk_space() {
     log "Checking available disk space..."
@@ -175,7 +201,7 @@ start_service() {
 # Check service status
 check_status() {
     log "Checking service status..."
-    if service "$SERVICE_NAME" status; then
+    if service "$SERVICE_NAME" status >/dev/null 2>&1; then
         success "Service is running properly"
         return 0
     else
@@ -227,6 +253,20 @@ main() {
     log "=========================================="
     log "Starting deployment of $SERVICE_NAME"
     log "=========================================="
+
+    # Check for git updates first
+    check_git_updates
+    local update_status=$?
+
+    if [ $update_status -eq 1 ]; then
+        log "=========================================="
+        success "No deployment needed - already up to date!"
+        log "=========================================="
+        exit 0
+    elif [ $update_status -eq 2 ]; then
+        error "Git fetch failed. Cannot continue."
+        exit 1
+    fi
 
     # Create backup
     create_backup
