@@ -410,6 +410,42 @@ def get_most_viewed_posts(limit=10, lang=None):
     
     return db.execute(query, params).fetchall()
 
+def get_top_helpful_posts(limit=10):
+    """Get top posts by helpful reactions."""
+    db = get_db()
+    query = '''
+        SELECT p.id, p.title, p.slug, p.language, p.author,
+               COUNT(CASE WHEN r.reaction_type = 'helpful' THEN 1 END) as helpful_count,
+               COUNT(CASE WHEN r.reaction_type = 'not_helpful' THEN 1 END) as not_helpful_count,
+               COUNT(r.id) as total_reactions
+        FROM posts p
+        LEFT JOIN reactions r ON p.id = r.post_id
+        WHERE p.status = 'published'
+        GROUP BY p.id
+        HAVING helpful_count > 0
+        ORDER BY helpful_count DESC
+        LIMIT ?
+    '''
+    return db.execute(query, (limit,)).fetchall()
+
+def get_top_not_helpful_posts(limit=10):
+    """Get top posts by not helpful reactions."""
+    db = get_db()
+    query = '''
+        SELECT p.id, p.title, p.slug, p.language, p.author,
+               COUNT(CASE WHEN r.reaction_type = 'helpful' THEN 1 END) as helpful_count,
+               COUNT(CASE WHEN r.reaction_type = 'not_helpful' THEN 1 END) as not_helpful_count,
+               COUNT(r.id) as total_reactions
+        FROM posts p
+        LEFT JOIN reactions r ON p.id = r.post_id
+        WHERE p.status = 'published'
+        GROUP BY p.id
+        HAVING not_helpful_count > 0
+        ORDER BY not_helpful_count DESC
+        LIMIT ?
+    '''
+    return db.execute(query, (limit,)).fetchall()
+
 def get_traffic_sources(days=30):
     """Get traffic sources for the last N days."""
     from collections import defaultdict
@@ -3676,13 +3712,42 @@ def admin_statistics():
     
     # Get reading patterns (hourly)
     reading_patterns = get_reading_patterns(days=7)
-    
+
+    # Get top helpful and not helpful posts
+    top_helpful = get_top_helpful_posts(limit=10)
+    top_helpful_list = []
+    for post in top_helpful:
+        top_helpful_list.append({
+            'title': post['title'],
+            'slug': post['slug'],
+            'language': post['language'],
+            'author': post['author'],
+            'helpful_count': post['helpful_count'],
+            'not_helpful_count': post['not_helpful_count'],
+            'total_reactions': post['total_reactions']
+        })
+
+    top_not_helpful = get_top_not_helpful_posts(limit=10)
+    top_not_helpful_list = []
+    for post in top_not_helpful:
+        top_not_helpful_list.append({
+            'title': post['title'],
+            'slug': post['slug'],
+            'language': post['language'],
+            'author': post['author'],
+            'helpful_count': post['helpful_count'],
+            'not_helpful_count': post['not_helpful_count'],
+            'total_reactions': post['total_reactions']
+        })
+
     return render_template('admin/statistics.html',
                          summary=summary,
                          most_viewed=most_viewed_list,
                          traffic_sources=traffic_sources,
                          other_referrers=other_referrers,
                          reading_patterns=reading_patterns,
+                         top_helpful=top_helpful_list,
+                         top_not_helpful=top_not_helpful_list,
                          languages=LANGUAGES)
 
 @app.route('/admin/api/post-stats/<int:post_id>')

@@ -332,6 +332,124 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Top Helpful Posts -->
+    <div class="table-card">
+        <h3><i class="fas fa-thumbs-up text-success"></i> Top 10 Most Helpful Posts</h3>
+        {% if top_helpful %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Post Title</th>
+                    <th>Author</th>
+                    <th class="text-center">👍 Helpful</th>
+                    <th class="text-center">👎 Not Helpful</th>
+                    <th class="text-center">Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in top_helpful %}
+                <tr>
+                    <td>
+                        <span class="badge badge-success">{{ loop.index }}</span>
+                    </td>
+                    <td>
+                        <strong>{{ post.title }}</strong>
+                        <br>
+                        <small class="text-muted">
+                            <i class="fas fa-globe"></i> {{ post.language.upper() }}
+                        </small>
+                    </td>
+                    <td>{{ post.author or 'Unknown' }}</td>
+                    <td class="text-center">
+                        <span class="badge badge-success">{{ post.helpful_count }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge badge-secondary">{{ post.not_helpful_count }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge badge-info">{{ post.total_reactions }}</span>
+                    </td>
+                    <td>
+                        <a href="/{{ post.language }}/post/{{ post.slug }}"
+                           target="_blank"
+                           class="btn btn-sm btn-outline-primary"
+                           title="View post">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">
+            <i class="fas fa-thumbs-up"></i>
+            <p>No reaction data yet. Posts will appear here once they receive helpful reactions.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Top Not Helpful Posts -->
+    <div class="table-card">
+        <h3><i class="fas fa-thumbs-down text-danger"></i> Top 10 Most Not Helpful Posts</h3>
+        {% if top_not_helpful %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Post Title</th>
+                    <th>Author</th>
+                    <th class="text-center">👍 Helpful</th>
+                    <th class="text-center">👎 Not Helpful</th>
+                    <th class="text-center">Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in top_not_helpful %}
+                <tr>
+                    <td>
+                        <span class="badge badge-primary">{{ loop.index }}</span>
+                    </td>
+                    <td>
+                        <strong>{{ post.title }}</strong>
+                        <br>
+                        <small class="text-muted">
+                            <i class="fas fa-globe"></i> {{ post.language.upper() }}
+                        </small>
+                    </td>
+                    <td>{{ post.author or 'Unknown' }}</td>
+                    <td class="text-center">
+                        <span class="badge badge-secondary">{{ post.helpful_count }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge" style="background: rgba(220, 53, 69, 0.1); color: #dc3545;">{{ post.not_helpful_count }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge badge-info">{{ post.total_reactions }}</span>
+                    </td>
+                    <td>
+                        <a href="/{{ post.language }}/post/{{ post.slug }}"
+                           target="_blank"
+                           class="btn btn-sm btn-outline-primary"
+                           title="View post">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">
+            <i class="fas fa-thumbs-down"></i>
+            <p>No reaction data yet. Posts will appear here once they receive not helpful reactions.</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
 {% endblock %}
