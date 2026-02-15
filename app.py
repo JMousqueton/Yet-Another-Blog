@@ -2250,6 +2250,7 @@ def admin_dashboard():
     for post in recent_posts:
         post_dict = dict(post)
         post_dict['reading_time'] = calculate_reading_time(post_dict['content'])
+        post_dict['view_count'] = get_post_view_count(post_dict['id'])
         posts_with_reading_time.append(post_dict)
 
     return render_template('admin/dashboard.html',
@@ -2298,13 +2299,14 @@ def admin_posts():
     
     posts = db.execute(query, params).fetchall()
     
-    # Add reading time to posts
+    # Add reading time and view count to posts
     posts_with_reading_time = []
     for post in posts:
         post_dict = dict(post)
         post_dict['reading_time'] = calculate_reading_time(post_dict['content'])
+        post_dict['view_count'] = get_post_view_count(post_dict['id'])
         posts_with_reading_time.append(post_dict)
-    
+
     return render_template('admin/posts.html',
                          posts=posts_with_reading_time,
                          status_filter=status_filter,

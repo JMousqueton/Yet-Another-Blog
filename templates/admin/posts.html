@@ -114,6 +114,7 @@
                             <th>Language</th>
                             <th>Status</th>
                             <th>Reading Time</th>
+                            <th>Views</th>
                             <th>Date</th>
                             <th>Actions</th>
                         </tr>
@@ -143,6 +144,9 @@
                                 {% endif %}
                             </td>
                             <td>{{ post.reading_time }} min</td>
+                            <td>
+                                <i class="far fa-eye"></i> {{ post.view_count }}
+                            </td>
                             <td>
                                 <small>{{ post.publish_date[:10] }}</small>
                                 <br>
