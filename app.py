@@ -1450,14 +1450,19 @@ def submit_reaction(lang, slug):
 
     g.language = lang
     reaction_type = request.form.get('reaction_type')
-    
+
     if reaction_type not in ('helpful', 'not_helpful'):
         return jsonify({'success': False, 'error': 'Invalid reaction type'}), 400
+
+    # Check referer for "not_helpful" reactions to prevent abuse
+    referer = request.referrer
+    if reaction_type == 'not_helpful' and not referer:
+        return jsonify({'success': False, 'error': 'Invalid request'}), 403
 
     db = get_db()
     now_iso = datetime.now().isoformat()
     post = db.execute('''
-        SELECT id FROM posts 
+        SELECT id FROM posts
         WHERE language = ? AND slug = ? AND status = 'published' AND publish_date <= ?
     ''', (lang, slug, now_iso)).fetchone()
 
