@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime, timezone
 from feedgen.feed import FeedGenerator
 from apscheduler.schedulers.background import BackgroundScheduler
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 import pytz
@@ -31,6 +31,10 @@ import unicodedata
 
 # Load environment variables
 load_dotenv()
+
+# Dummy hash used to keep login response time constant when the email is not found,
+# preventing user enumeration via timing analysis (issue #5).
+_DUMMY_HASH = generate_password_hash('__dummy_timing_protection__')
 
 app = Flask(__name__)
 # Trust proxy headers for real client IP and scheme (1 proxy hop)
@@ -2105,7 +2109,12 @@ def admin_login():
             SELECT * FROM authors WHERE email = ?
         ''', (email,)).fetchone()
         
-        if user and check_password_hash(user['password'], password):
+        # Always run the hash check to keep response time constant
+        # regardless of whether the email exists (prevents timing-based enumeration).
+        stored_hash = user['password'] if user else _DUMMY_HASH
+        password_ok = check_password_hash(stored_hash, password)
+
+        if user and password_ok:
             # Check if 2FA is enabled
             if user['totp_enabled']:
                 # Store user_id temporarily for 2FA verification
@@ -2115,7 +2124,8 @@ def admin_login():
                 session['pending_2fa_is_admin'] = bool(int(user['is_admin']))
                 return redirect(url_for('admin_2fa_verify'))
             else:
-                # No 2FA, log in directly
+                # No 2FA — regenerate session to prevent session fixation
+                session.clear()
                 session['user_id'] = user['id']
                 session['user_name'] = user['name']
                 session['user_email'] = user['email']
@@ -2144,11 +2154,17 @@ def admin_2fa_verify():
         if user and user['totp_secret']:
             totp = pyotp.TOTP(user['totp_secret'])
             if totp.verify(code, valid_window=1):
-                # 2FA successful, complete login
-                session['user_id'] = session.pop('pending_2fa_user_id')
-                session['user_name'] = session.pop('pending_2fa_user_name')
-                session['user_email'] = session.pop('pending_2fa_user_email')
-                session['is_admin'] = session.pop('pending_2fa_is_admin')
+                # 2FA successful — save pending data, then clear the session
+                # entirely to regenerate the session ID and prevent session fixation.
+                user_id   = session['pending_2fa_user_id']
+                user_name = session['pending_2fa_user_name']
+                user_email = session['pending_2fa_user_email']
+                is_admin  = session['pending_2fa_is_admin']
+                session.clear()
+                session['user_id']   = user_id
+                session['user_name'] = user_name
+                session['user_email'] = user_email
+                session['is_admin']  = is_admin
                 flash('Successfully logged in with 2FA!', 'success')
                 return redirect(url_for('admin_dashboard'))
             else:
