@@ -15,13 +15,15 @@
     <link rel="icon" href="{{ url_for('static', filename=global_favicon or 'favicon.ico') }}" type="image/x-icon">
     
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous">
 
-    <!-- Techy Font -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+    <!-- Modern Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap">
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/' + (template_css or global_template_css or 'default.css')) }}">
@@ -158,6 +160,9 @@
     </style>
 </head>
 <body>
+    <!-- Reading Progress Bar -->
+    <div id="reading-progress"><div id="reading-progress-bar"></div></div>
+
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container">
@@ -226,30 +231,36 @@
     
     <!-- Footer -->
     <footer>
-        <div class="container text-center">
-            <p class="mb-1">
-                <i class="fas fa-copyright"></i> 2026 Julien Mousqueton. 
-                {{ t.footer.all_rights_reserved }}
-            </p>
-            <p class="mb-1">
-                Made with ❤️ by 
-                <a href="https://github.com/JMousqueton/Yet-Another-Blog" class="text-white text-decoration-none" target="_blank" rel="noopener noreferrer">
-                    Yet Another Blog <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                </a>
-            </p>
-            <p class="mt-2">
-                <a href="/{{ lang }}/rss" class="text-white text-decoration-none">
-                    <i class="fas fa-rss"></i> 
-                    {{ t.footer.subscribe_rss }}
-                </a>
-            </p>
-            {% if disclaimer_page %}
-            <p class="mt-2">
-                <a href="{{ disclaimer_page.url }}" class="text-white text-decoration-none">
-                    <i class="fas fa-scale-balanced"></i> {{ t.footer.disclaimer or 'Disclaimer' }}
-                </a>
-            </p>
-            {% endif %}
+        <div class="container">
+            <div class="row align-items-center gy-4">
+                <div class="col-md-4">
+                    <div class="footer-brand">
+                        <i class="fas fa-blog me-2"></i>{{ blog_title or 'My Blog' }}
+                    </div>
+                    <p class="footer-tagline">{{ meta_description or '' }}</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="footer-links">
+                        <a href="/{{ lang }}"><i class="fas fa-home fa-sm me-1"></i>{{ t.nav.home }}</a>
+                        <a href="/{{ lang }}/contact"><i class="fas fa-envelope fa-sm me-1"></i>{{ t.nav.contact if t.nav.contact else 'Contact' }}</a>
+                        <a href="/{{ lang }}/rss"><i class="fas fa-rss fa-sm me-1"></i>RSS</a>
+                        {% if disclaimer_page %}
+                        <a href="{{ disclaimer_page.url }}"><i class="fas fa-scale-balanced fa-sm me-1"></i>{{ t.footer.disclaimer or 'Disclaimer' }}</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <p class="footer-copy mb-1">
+                        <i class="fas fa-copyright fa-sm me-1"></i>2026 Julien Mousqueton
+                    </p>
+                    <p class="footer-copy mb-0">
+                        Made with <i class="fas fa-heart text-danger fa-sm mx-1"></i> by
+                        <a href="https://github.com/JMousqueton/Yet-Another-Blog" target="_blank" rel="noopener noreferrer">
+                            Yet Another Blog <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i>
+                        </a>
+                    </p>
+                </div>
+            </div>
         </div>
     </footer>
     
@@ -279,7 +290,7 @@
     </div>
     
     <!-- Bootstrap 5 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     
     <script>
         // Theme toggle functionality
@@ -414,8 +425,21 @@
                 });
             }
         })();
+
+        // Reading progress bar
+        (function() {
+            const bar = document.getElementById('reading-progress-bar');
+            if (!bar) return;
+            function updateProgress() {
+                const scrollTop = window.scrollY;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                bar.style.width = docHeight > 0 ? (scrollTop / docHeight * 100) + '%' : '0%';
+            }
+            window.addEventListener('scroll', updateProgress, { passive: true });
+            updateProgress();
+        })();
     </script>
-    
+
     <!-- Twitter Widget for Embeds -->
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     

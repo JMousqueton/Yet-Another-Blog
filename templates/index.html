@@ -22,110 +22,83 @@
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-lg-8 mx-auto">
-        <!-- Header -->
-        <div class="text-center mb-5">
-            <h1 class="display-4 fw-bold">{{ blog_title or t.index.welcome }}</h1>
-            {% if blog_subtitle %}
-            <p class="lead text-muted">{{ blog_subtitle|safe }}</p>
-            {% elif meta_description %}
-            <p class="lead text-muted">{{ meta_description }}</p>
-            {% endif %}
-        </div>
-        
-        <!-- Search Bar -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form method="get" action="/{{ lang }}" class="row g-2">
-                    <div class="col-md-10">
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input type="text" 
-                                   name="q" 
-                                   class="form-control" 
-                                   placeholder="{{ t.search.placeholder }}"
-                                   value="{{ search_query or '' }}">
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="hero-title">{{ blog_title or t.index.welcome }}</h1>
+                {% if blog_subtitle %}
+                <p class="hero-subtitle">{{ blog_subtitle|safe }}</p>
+                {% elif meta_description %}
+                <p class="hero-subtitle">{{ meta_description }}</p>
+                {% endif %}
+
+                <!-- Floating Search -->
+                <form method="get" action="/{{ lang }}" class="hero-search-form">
+                    <div class="hero-search-inner">
+                        <i class="fas fa-magnifying-glass hero-search-icon"></i>
+                        <input type="text" name="q" class="hero-search-input"
+                               placeholder="{{ t.search.placeholder }}"
+                               value="{{ search_query or '' }}">
+                        <button type="submit" class="hero-search-btn">
                             {{ t.search.button }}
                         </button>
                     </div>
                 </form>
                 {% if search_query %}
-                <div class="mt-2">
-                    <small class="text-muted">
-                        {{ t.search.searching_for }} "{{ search_query }}"
-                    </small>
+                <div class="mt-3">
+                    <span class="text-muted small">{{ t.search.searching_for }} "<strong>{{ search_query }}</strong>"</span>
                     <a href="/{{ lang }}" class="btn btn-sm btn-outline-secondary ms-2">
-                        <i class="fas fa-times"></i>
-                        {{ t.search['clear'] }}
+                        <i class="fas fa-xmark me-1"></i>{{ t.search['clear'] }}
                     </a>
                 </div>
                 {% endif %}
             </div>
         </div>
+    </section>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
         
         <!-- Featured Posts Section -->
         {% if featured_posts and not search_query %}
         <div class="featured-posts mb-5">
-            <h2 class="h3 mb-4">
-                <i class="fas fa-star text-warning"></i> {{ t.index.featured_posts }}
-            </h2>
+            <div class="section-label mb-4">
+                <i class="fas fa-bolt"></i> {{ t.index.featured_posts }}
+            </div>
             <div class="row g-4">
                 {% for post in featured_posts %}
                 <div class="col-md-6">
-                    <article class="card featured-post-card h-100 shadow-sm border-warning border-2">
+                    <article class="featured-post-card h-100">
                         {% if post.featured_image %}
-                        <div class="featured-post-image" style="position: relative;">
-                            <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" 
-                                 class="card-img-top" 
-                                 alt="{{ post.title }}"
-                                 style="height: 200px; object-fit: cover;">
-                            <span class="badge bg-warning position-absolute top-0 end-0 m-2">
-                                <i class="fas fa-star"></i> {{ t.index.featured }}
+                        <div class="featured-post-img-wrap">
+                            <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}"
+                                 alt="{{ post.title }}" loading="lazy">
+                            <span class="featured-badge">
+                                <i class="fas fa-star fa-xs me-1"></i>{{ t.index.featured }}
                             </span>
                         </div>
-                        {% else %}
-                        <div class="card-header bg-warning text-dark">
-                            <i class="fas fa-star"></i> {{ t.index.featured }}
-                        </div>
                         {% endif %}
-                        <div class="card-body">
-                            <h3 class="card-title h5">
-                                <a href="/{{ lang }}/post/{{ post.slug }}" class="text-decoration-none stretched-link">
-                                    {{ post.title }}
-                                </a>
-                            </h3>
-                            
-                            <div class="post-meta mb-2 small text-muted">
-                                <i class="far fa-calendar"></i> {{ post.publish_date[:10] }}
-                                {% if post.author %}
-                                <span class="mx-1">|</span>
-                                <i class="far fa-user"></i> {{ post.author }}
-                                {% endif %}
-                                <span class="mx-1">|</span>
-                                <i class="far fa-clock"></i> {{ post.reading_time }} {{ t.post.min_read }}
-                                <span class="mx-1">|</span>
-                                <i class="far fa-eye"></i> {{ post.view_count }} {{ t.post.views }}
+                        <div class="featured-post-body">
+                            <div class="post-meta mb-2">
+                                <span><i class="far fa-calendar"></i> {{ post.publish_date[:10] }}</span>
+                                <span><i class="far fa-clock"></i> {{ post.reading_time }} {{ t.post.min_read }}</span>
+                                <span><i class="far fa-eye"></i> {{ post.view_count }}</span>
                             </div>
-                            
+                            <h3 class="featured-post-title">
+                                <a href="/{{ lang }}/post/{{ post.slug }}">{{ post.title }}</a>
+                            </h3>
                             {% if post.excerpt %}
-                            <p class="card-text text-muted">{{ post.excerpt|truncate(120) }}</p>
+                            <p class="featured-post-excerpt">{{ post.excerpt|truncate(110) }}</p>
                             {% else %}
-                            <p class="card-text text-muted">{{ post.content|striptags|truncate(120) }}</p>
+                            <p class="featured-post-excerpt">{{ post.content|striptags|truncate(110) }}</p>
                             {% endif %}
                         </div>
                     </article>
                 </div>
                 {% endfor %}
             </div>
-            
-            <hr class="my-5">
+            <div class="section-divider my-5"></div>
         </div>
         {% endif %}
         
@@ -139,56 +112,38 @@
             {% endif %}
             
             {% for post in posts %}
-            <article class="card post-card">
-                <div class="card-body">
-                    <div class="row g-3 align-items-center">
-                        <div class="col-md-8">
-                            <h2 class="card-title h3">
-                                <a href="/{{ lang }}/post/{{ post.slug }}" class="text-decoration-none">
-                                    {{ post.title }}
-                                </a>
-                            </h2>
-                            
-                            <div class="post-meta mb-3">
-                                <i class="far fa-calendar"></i>
-                                {{ post.publish_date[:10] }}
-                                {% if post.author %}
-                                <span class="mx-2">|</span>
+            <article class="post-card">
+                <div class="post-card-inner">
+                    <div class="post-card-content">
+                        <div class="post-meta mb-2">
+                            <span><i class="far fa-calendar"></i> {{ post.publish_date[:10] }}</span>
+                            {% if post.author %}
+                            <span>
                                 <i class="far fa-user"></i>
-                                <a href="/{{ lang }}/author/{{ post.author|replace(' ', '-') }}" class="text-decoration-none">
-                                    {{ post.author }}
-                                </a>
-                                {% endif %}
-                                <span class="mx-2">|</span>
-                                <i class="far fa-clock"></i>
-                                {{ post.reading_time }} {{ t.post.min_read }}
-                                <span class="mx-2">|</span>
-                                <i class="far fa-eye"></i>
-                                {{ post.view_count }} {{ t.post.views }}
-                            </div>
-                            
-                            {% if post.excerpt %}
-                            <p class="card-text">{{ post.excerpt }}</p>
-                            {% else %}
-                            <p class="card-text">{{ post.content|striptags|truncate(200) }}</p>
+                                <a href="/{{ lang }}/author/{{ post.author|replace(' ', '-') }}">{{ post.author }}</a>
+                            </span>
                             {% endif %}
-                            
-                            <a href="/{{ lang }}/post/{{ post.slug }}" class="btn btn-primary">
-                                {{ t.post.read_more }}
-                                <i class="fas fa-arrow-right"></i>
-                            </a>
+                            <span><i class="far fa-clock"></i> {{ post.reading_time }} {{ t.post.min_read }}</span>
+                            <span><i class="far fa-eye"></i> {{ post.view_count }}</span>
                         </div>
-                        {% if post.featured_image %}
-                        <div class="col-md-4 text-md-end text-center">
-                            <div class="post-card-thumb ms-md-auto">
-                                <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" 
-                                     alt="{{ post.title }}"
-                                     loading="lazy"
-                                     class="lazy-image">
-                            </div>
-                        </div>
+                        <h2 class="post-card-title">
+                            <a href="/{{ lang }}/post/{{ post.slug }}">{{ post.title }}</a>
+                        </h2>
+                        {% if post.excerpt %}
+                        <p class="post-card-excerpt">{{ post.excerpt }}</p>
+                        {% else %}
+                        <p class="post-card-excerpt">{{ post.content|striptags|truncate(200) }}</p>
                         {% endif %}
+                        <a href="/{{ lang }}/post/{{ post.slug }}" class="post-card-link">
+                            {{ t.post.read_more }} <i class="fas fa-arrow-right fa-sm ms-1"></i>
+                        </a>
                     </div>
+                    {% if post.featured_image %}
+                    <div class="post-card-thumb">
+                        <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}"
+                             alt="{{ post.title }}" loading="lazy" class="lazy-image">
+                    </div>
+                    {% endif %}
                 </div>
             </article>
             {% endfor %}
@@ -286,67 +241,4 @@
         {% endif %}
     </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* Enhanced card hover effects */
-    .post-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        cursor: pointer;
-    }
-    
-    .post-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-    }
-    
-    .post-card .card-title a {
-        transition: color 0.2s ease;
-    }
-    
-    .post-card:hover .card-title a {
-        color: var(--secondary-color);
-    }
-    
-    .post-card-thumb img {
-        width: 100%;
-        max-height: 140px;
-        object-fit: cover;
-        border-radius: 10px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-        transition: transform 0.3s ease;
-    }
-    
-    .post-card:hover .post-card-thumb img {
-        transform: scale(1.05);
-    }
-    
-    @media (min-width: 768px) {
-        .post-card-thumb {
-            max-width: 200px;
-        }
-    }
-    
-    /* Lazy loading styles */
-    .lazy-image {
-        opacity: 0;
-        transition: opacity 0.4s ease-in;
-        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-        background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
-    }
-    
-    .lazy-image.loaded {
-        opacity: 1;
-        background: none;
-        animation: none;
-    }
-    
-    @keyframes shimmer {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-    }
-</style>
 {% endblock %}

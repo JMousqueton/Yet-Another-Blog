@@ -146,7 +146,7 @@ def markdown_filter(text):
             "td", "th", "thead", "tr", "ul",
         },
         attributes={
-            "a": {"href", "title", "target", "rel"},
+            "a": {"href", "title", "target"},
             "blockquote": {"class", "data-theme"},
             "code": {"class"},
             "div": {"class"},
