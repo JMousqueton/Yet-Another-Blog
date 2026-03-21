@@ -63,6 +63,40 @@
             margin: 1.5rem 0;
             overflow-x: auto;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .copy-code-btn {
+            position: absolute;
+            top: .6rem;
+            right: .6rem;
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            padding: .28rem .65rem;
+            font-size: .75rem;
+            font-weight: 600;
+            font-family: inherit;
+            color: #94a3b8;
+            background: rgba(255, 255, 255, .07);
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: .4rem;
+            cursor: pointer;
+            transition: color .2s ease, background .2s ease, border-color .2s ease;
+            white-space: nowrap;
+            z-index: 1;
+        }
+
+        .copy-code-btn:hover {
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, .13);
+            border-color: rgba(255, 255, 255, .22);
+        }
+
+        .copy-code-btn.copied {
+            color: #4ade80;
+            border-color: rgba(74, 222, 128, .35);
+            background: rgba(74, 222, 128, .08);
         }
         
         .highlight pre {
@@ -424,6 +458,34 @@
                     img.classList.add('loaded');
                 });
             }
+        })();
+
+        // Copy-code buttons on every .highlight block
+        (function() {
+            document.querySelectorAll('.highlight').forEach(function(block) {
+                const btn = document.createElement('button');
+                btn.className = 'copy-code-btn';
+                btn.innerHTML = '<i class="far fa-copy"></i> Copy';
+                btn.setAttribute('aria-label', 'Copy code');
+                block.appendChild(btn);
+
+                btn.addEventListener('click', function() {
+                    const code = block.querySelector('pre') ? block.querySelector('pre').innerText : block.innerText;
+                    navigator.clipboard.writeText(code).then(function() {
+                        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                        btn.classList.add('copied');
+                        setTimeout(function() {
+                            btn.innerHTML = '<i class="far fa-copy"></i> Copy';
+                            btn.classList.remove('copied');
+                        }, 2000);
+                    }).catch(function() {
+                        btn.innerHTML = '<i class="fas fa-xmark"></i> Error';
+                        setTimeout(function() {
+                            btn.innerHTML = '<i class="far fa-copy"></i> Copy';
+                        }, 2000);
+                    });
+                });
+            });
         })();
 
         // Reading progress bar
