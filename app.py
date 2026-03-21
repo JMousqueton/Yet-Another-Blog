@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, make_response, redirect, url_for, g, Response, session, flash, abort, jsonify
+from markupsafe import escape as html_escape
 import sqlite3
 from datetime import datetime, timezone
 from feedgen.feed import FeedGenerator
@@ -13,6 +14,7 @@ from functools import wraps
 from PIL import Image
 import io
 import markdown
+import nh3
 import json
 import smtplib
 from email.mime.text import MIMEText
@@ -132,7 +134,32 @@ def markdown_filter(text):
         r'<a target="_blank" rel="noopener noreferrer" href=',
         html
     )
-    
+
+    # Sanitize HTML to prevent XSS while preserving embed and formatting tags
+    html = nh3.clean(
+        html,
+        tags={
+            "a", "abbr", "b", "blockquote", "br", "caption", "code",
+            "del", "div", "em", "h1", "h2", "h3", "h4", "h5", "h6",
+            "hr", "i", "iframe", "img", "ins", "li", "ol", "p", "pre",
+            "s", "span", "strong", "sub", "sup", "table", "tbody",
+            "td", "th", "thead", "tr", "ul",
+        },
+        attributes={
+            "a": {"href", "title", "target", "rel"},
+            "blockquote": {"class", "data-theme"},
+            "code": {"class"},
+            "div": {"class"},
+            "iframe": {"src", "allowfullscreen", "loading", "class", "frameborder", "width", "height"},
+            "img": {"src", "alt", "title", "class", "loading"},
+            "pre": {"class"},
+            "span": {"class"},
+            "table": {"class"},
+            "td": {"align", "colspan", "rowspan"},
+            "th": {"align", "colspan", "rowspan"},
+        },
+    )
+
     return html
 
 # Word count filter for Jinja2 templates
@@ -1724,13 +1751,13 @@ def contact(lang):
                     email_body = f"""
                         <p>You have received a new contact message.</p>
                         <ul>
-                            <li><strong>Name:</strong> {name}</li>
-                            <li><strong>Email:</strong> {email}</li>
-                            <li><strong>Language:</strong> {lang.upper()}</li>
-                            <li><strong>Subject:</strong> {subject or '—'}</li>
+                            <li><strong>Name:</strong> {html_escape(name)}</li>
+                            <li><strong>Email:</strong> {html_escape(email)}</li>
+                            <li><strong>Language:</strong> {html_escape(lang.upper())}</li>
+                            <li><strong>Subject:</strong> {html_escape(subject) if subject else '—'}</li>
                         </ul>
                         <p><strong>Message:</strong></p>
-                        <pre style='white-space:pre-wrap;font-family:inherit;'>{message}</pre>
+                        <pre style='white-space:pre-wrap;font-family:inherit;'>{html_escape(message)}</pre>
                     """
                     send_email(admin_email, email_subject, email_body)
 
@@ -3640,37 +3667,52 @@ def api_import_database():
             return jsonify({'success': False, 'message': 'Invalid JSON file'}), 400
         
         db = get_db()
-        
+
+        # Build whitelist of valid table names from actual DB schema
+        valid_tables_rows = db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        ).fetchall()
+        valid_tables = {row['name'] for row in valid_tables_rows}
+
         # If erase option is checked, delete all data from tables
         if erase:
-            tables = db.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-            ).fetchall()
-            
-            for table_row in tables:
-                table_name = table_row['name']
+            for table_name in valid_tables:
                 db.execute(f"DELETE FROM {table_name}")
-        
+
         # Import each table
         imported_count = 0
         for table_name, table_data in import_data.get('tables', {}).items():
+            # Validate table name against actual schema
+            if table_name not in valid_tables:
+                return jsonify({'success': False, 'message': f'Unknown table: {table_name}'}), 400
+
+            # Build whitelist of valid columns for this table
+            valid_columns = {
+                col['name']
+                for col in db.execute(f"PRAGMA table_info({table_name})").fetchall()
+            }
+
             rows = table_data.get('rows', [])
-            
+
             for row in rows:
                 columns = list(row.keys())
+                # Validate every column name against the actual table schema
+                invalid_cols = [c for c in columns if c not in valid_columns]
+                if invalid_cols:
+                    return jsonify({'success': False, 'message': f'Unknown columns in {table_name}: {invalid_cols}'}), 400
+
                 values = list(row.values())
                 placeholders = ','.join(['?' for _ in columns])
-                
+                col_list = ','.join(columns)
+
                 if erase:
-                    # Direct insert when erasing
                     db.execute(
-                        f"INSERT INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})",
+                        f"INSERT INTO {table_name} ({col_list}) VALUES ({placeholders})",
                         values
                     )
                 else:
-                    # Insert or replace to avoid duplicates
                     db.execute(
-                        f"INSERT OR REPLACE INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})",
+                        f"INSERT OR REPLACE INTO {table_name} ({col_list}) VALUES ({placeholders})",
                         values
                     )
                 imported_count += 1
