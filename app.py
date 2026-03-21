@@ -11,7 +11,7 @@ import pytz
 import os
 from dotenv import load_dotenv
 from functools import wraps
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import io
 import markdown
 import nh3
@@ -260,6 +260,143 @@ def _prepare_image(img, max_width=None, max_size=None):
 def _save_webp(img, filepath, quality=85):
     """Save a Pillow image as WebP with the given quality."""
     img.save(filepath, 'WEBP', quality=quality, method=4)
+
+
+# ---------------------------------------------------------------------------
+# OG image generation
+# ---------------------------------------------------------------------------
+_OG_DIR = os.path.join('static', 'uploads', 'og')
+
+# Ordered list of font paths to try (macOS, Linux, bundled)
+_FONT_CANDIDATES = [
+    os.path.join('static', 'fonts', 'Inter-Bold.ttf'),
+    os.path.join('static', 'fonts', 'Inter.ttf'),
+    # macOS
+    '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
+    '/Library/Fonts/Arial Bold.ttf',
+    '/System/Library/Fonts/Helvetica.ttc',
+    # Linux
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+    '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf',
+]
+
+
+def _get_font(size: int):
+    """Return the best available TrueType font at the requested size."""
+    for path in _FONT_CANDIDATES:
+        if os.path.exists(path):
+            try:
+                return ImageFont.truetype(path, size)
+            except Exception:
+                continue
+    # Pillow ≥10.1 built-in scalable fallback
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
+
+
+def _generate_og_image(title: str, site_name: str, output_path: str):
+    """
+    Create a 1200×630 OG social-card image: gradient background + wrapped title.
+    Saved as PNG to *output_path*.
+    """
+    W, H = 1200, 630
+    MARGIN = 90
+    # Gradient: indigo-600 (#4f46e5) → violet-600 (#7c3aed)
+    C1, C2 = (79, 70, 229), (124, 58, 237)
+
+    img = Image.new('RGB', (W, H))
+    draw = ImageDraw.Draw(img)
+
+    # Horizontal gradient
+    for x in range(W):
+        t = x / W
+        color = tuple(int(C1[i] + (C2[i] - C1[i]) * t) for i in range(3))
+        draw.line([(x, 0), (x, H)], fill=color)
+
+    # Subtle white decorative circle (top-right)
+    draw.ellipse([(900, -160), (1360, 300)], fill=(255, 255, 255, 0) if False else None,
+                 outline=(255, 255, 255, 0) if False else None)
+    # Use a semi-transparent overlay rectangle at bottom for the site name strip
+    draw.rectangle([(0, H - 90), (W, H)], fill=(0, 0, 0))
+    # White accent line above the strip
+    draw.rectangle([(0, H - 92), (W, H - 90)], fill=(255, 255, 255))
+
+    # ---- Title text (centered, word-wrapped, max 3 lines) ----
+    title_font = _get_font(72)
+    max_w = W - MARGIN * 2
+    words = title.split()
+    lines, current = [], ''
+    for word in words:
+        test = (current + ' ' + word).strip()
+        bbox = draw.textbbox((0, 0), test, font=title_font)
+        if bbox[2] > max_w and current:
+            lines.append(current)
+            current = word
+        else:
+            current = test
+    if current:
+        lines.append(current)
+    if len(lines) > 3:
+        lines = lines[:3]
+        lines[-1] = lines[-1].rstrip() + '\u2026'  # ellipsis
+
+    lh = draw.textbbox((0, 0), 'Ag', font=title_font)[3] + 16
+    total_h = lh * len(lines)
+    # Vertically centered in the upper ~540 px (leaving room for the strip)
+    y0 = (H - 90 - total_h) // 2
+
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=title_font)
+        x = (W - (bbox[2] - bbox[0])) // 2
+        y = y0 + i * lh
+        # Drop shadow
+        draw.text((x + 3, y + 3), line, font=title_font, fill=(30, 20, 100))
+        # White text
+        draw.text((x, y), line, font=title_font, fill=(255, 255, 255))
+
+    # ---- Site name in the bottom strip ----
+    if site_name:
+        name_font = _get_font(30)
+        bbox = draw.textbbox((0, 0), site_name, font=name_font)
+        x = (W - (bbox[2] - bbox[0])) // 2
+        draw.text((x, H - 68), site_name, font=name_font, fill=(200, 195, 255))
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    img.save(output_path, 'PNG', optimize=True)
+
+
+def get_og_image_url(entity_type: str, entity_id: int, title: str,
+                     updated_at: str | None = None) -> str:
+    """
+    Return the URL of a cached OG image, generating it on the fly if needed.
+    *entity_type* is 'post' or 'page'.
+    Re-generates when the cached file is older than *updated_at*.
+    """
+    filename = f'{entity_type}_{entity_id}.png'
+    filepath = os.path.join(_OG_DIR, filename)
+
+    needs_regen = not os.path.exists(filepath)
+    if not needs_regen and updated_at:
+        try:
+            file_mtime = os.path.getmtime(filepath)
+            post_mtime = datetime.fromisoformat(updated_at).timestamp()
+            needs_regen = post_mtime > file_mtime
+        except Exception:
+            pass
+
+    if needs_regen:
+        try:
+            site_name = get_setting('blog_title', '')
+            _generate_og_image(title, site_name, filepath)
+        except Exception as e:
+            print(f'OG image generation error: {e}')
+            return ''
+
+    return url_for('static', filename=f'uploads/og/{filename}', _external=True)
+
 
 def save_author_image(file, author_id):
     """Save and optimize author profile image as WebP."""
@@ -1223,7 +1360,10 @@ def post_detail(lang, slug):
     post['view_count'] = get_post_view_count(post['id'])
     page_meta_description = post.get('excerpt') or meta_description
     meta_title = f"{post['title']} - {blog_title}" if blog_title else post['title']
-    meta_image = url_for('static', filename=f"uploads/{post['featured_image']}", _external=True) if post.get('featured_image') else None
+    if post.get('featured_image'):
+        meta_image = url_for('static', filename=f"uploads/{post['featured_image']}", _external=True)
+    else:
+        meta_image = get_og_image_url('post', post['id'], post['title'], post.get('updated_at')) or None
 
     # Comments (only if globally enabled and post allows it)
     comments_enabled_global = get_setting('enable_comments', 'off') == 'on'
@@ -1645,8 +1785,11 @@ def page_detail(lang, slug):
     page['reading_time'] = calculate_reading_time(page['content'])
     page_meta_description = (page.get('content')[:160] if page.get('content') else meta_description)
     meta_title = f"{page['title']} - {blog_title}" if blog_title else page['title']
-    meta_image = url_for('static', filename='default-og-image.jpg', _external=True) if os.path.exists(os.path.join('static', 'default-og-image.jpg')) else None
-    
+    if page.get('featured_image'):
+        meta_image = url_for('static', filename=f"uploads/{page['featured_image']}", _external=True)
+    else:
+        meta_image = get_og_image_url('page', page['id'], page['title'], page.get('updated_at')) or None
+
     response = make_response(render_template('page.html',
                          page=page,
                          lang=lang,
