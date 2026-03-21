@@ -238,32 +238,40 @@ def allowed_file(filename):
     """Check if file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def _prepare_image(img, max_width=None, max_size=None):
+    """Flatten transparency and optionally resize an image, returning an RGB copy."""
+    if img.mode == 'P':
+        img = img.convert('RGBA')
+    if img.mode in ('RGBA', 'LA'):
+        background = Image.new('RGB', img.size, (255, 255, 255))
+        background.paste(img, mask=img.split()[-1])
+        img = background
+    elif img.mode != 'RGB':
+        img = img.convert('RGB')
+    if max_size:
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+    elif max_width and img.width > max_width:
+        img = img.resize(
+            (max_width, int(img.height * max_width / img.width)),
+            Image.Resampling.LANCZOS
+        )
+    return img
+
+def _save_webp(img, filepath, quality=85):
+    """Save a Pillow image as WebP with the given quality."""
+    img.save(filepath, 'WEBP', quality=quality, method=4)
+
 def save_author_image(file, author_id):
-    """Save and optimize author profile image."""
+    """Save and optimize author profile image as WebP."""
     if not file or file.filename == '':
         return None
-    
     if not allowed_file(file.filename):
         return None
-    
     try:
-        # Read and optimize image
-        img = Image.open(file.stream)
-        
-        # Convert RGBA to RGB if necessary
-        if img.mode in ('RGBA', 'LA', 'P'):
-            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-            rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-            img = rgb_img
-        
-        # Resize to max 400x400
-        img.thumbnail((400, 400), Image.Resampling.LANCZOS)
-        
-        # Save as optimized JPEG
-        filename = f'author_{author_id}.jpg'
+        img = _prepare_image(Image.open(file.stream), max_size=(400, 400))
+        filename = f'author_{author_id}.webp'
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        img.save(filepath, 'JPEG', quality=85, optimize=True)
-        
+        _save_webp(img, filepath)
         return filename
     except Exception as e:
         print(f"Error saving image: {e}")
@@ -2819,19 +2827,13 @@ def admin_new_post():
                 if 'featured_image' in request.files:
                     file = request.files['featured_image']
                     if file and file.filename:
-                        filename = secure_filename(f"post_{datetime.now().timestamp()}_{file.filename}")
+                        base = os.path.splitext(secure_filename(f"post_{datetime.now().timestamp()}_{file.filename}"))[0]
+                        filename = base + '.webp'
                         filepath = os.path.join('static', 'uploads', filename)
                         os.makedirs(os.path.join('static', 'uploads'), exist_ok=True)
                         try:
-                            img = Image.open(file.stream)
-                            if img.mode != 'RGB':
-                                img = img.convert('RGB')
-                            max_width = 1200
-                            if img.width > max_width:
-                                ratio = max_width / img.width
-                                new_height = int(img.height * ratio)
-                                img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                            img.save(filepath, 'JPEG', quality=85, optimize=True)
+                            img = _prepare_image(Image.open(file.stream), max_width=1200)
+                            _save_webp(img, filepath)
                             featured_image = filename
                         except Exception as e:
                             flash(f'Error processing image: {str(e)}', 'warning')
@@ -2861,25 +2863,13 @@ def admin_new_post():
             if 'featured_image' in request.files:
                 file = request.files['featured_image']
                 if file and file.filename:
-                    filename = secure_filename(f"post_{datetime.now().timestamp()}_{file.filename}")
+                    base = os.path.splitext(secure_filename(f"post_{datetime.now().timestamp()}_{file.filename}"))[0]
+                    filename = base + '.webp'
                     filepath = os.path.join('static', 'uploads', filename)
-                    
-                    # Create uploads directory if it doesn't exist
                     os.makedirs(os.path.join('static', 'uploads'), exist_ok=True)
-                    
-                    # Save and optimize image
                     try:
-                        img = Image.open(file.stream)
-                        # Convert RGBA to RGB if necessary
-                        if img.mode == 'RGBA':
-                            img = img.convert('RGB')
-                        # Resize to max 1200px width while maintaining aspect ratio
-                        max_width = 1200
-                        if img.width > max_width:
-                            ratio = max_width / img.width
-                            new_height = int(img.height * ratio)
-                            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                        img.save(filepath, 'JPEG', quality=85, optimize=True)
+                        img = _prepare_image(Image.open(file.stream), max_width=1200)
+                        _save_webp(img, filepath)
                         featured_image = filename
                     except Exception as e:
                         flash(f'Error processing image: {str(e)}', 'warning')
@@ -3052,25 +3042,13 @@ def admin_edit_post(post_id):
             if 'featured_image' in request.files:
                 file = request.files['featured_image']
                 if file and file.filename:
-                    filename = secure_filename(f"post_{datetime.now().timestamp()}_{file.filename}")
+                    base = os.path.splitext(secure_filename(f"post_{datetime.now().timestamp()}_{file.filename}"))[0]
+                    filename = base + '.webp'
                     filepath = os.path.join('static', 'uploads', filename)
-                    
-                    # Create uploads directory if it doesn't exist
                     os.makedirs(os.path.join('static', 'uploads'), exist_ok=True)
-                    
-                    # Save and optimize image
                     try:
-                        img = Image.open(file.stream)
-                        # Convert any mode to RGB for JPEG compatibility
-                        if img.mode != 'RGB':
-                            img = img.convert('RGB')
-                        # Resize to max 1200px width while maintaining aspect ratio
-                        max_width = 1200
-                        if img.width > max_width:
-                            ratio = max_width / img.width
-                            new_height = int(img.height * ratio)
-                            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                        img.save(filepath, 'JPEG', quality=85, optimize=True)
+                        img = _prepare_image(Image.open(file.stream), max_width=1200)
+                        _save_webp(img, filepath)
                         featured_image = filename
                     except Exception as e:
                         flash(f'Error processing image: {str(e)}', 'warning')
