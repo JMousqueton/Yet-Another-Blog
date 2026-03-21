@@ -294,6 +294,22 @@ def get_disclaimer_page(lang):
     slug = get_setting(f'disclaimer_page_{lang}', '')
     if not slug:
         return None
+    try:
+        db = get_db()
+        page = db.execute('''
+            SELECT title, slug
+            FROM pages
+            WHERE language = ? AND slug = ? AND status = 'published'
+        ''', (lang, slug)).fetchone()
+        if page:
+            return {
+                'title': page['title'],
+                'slug': page['slug'],
+                'url': url_for('page_detail', lang=lang, slug=page['slug'])
+            }
+    except Exception as e:
+        print(f"Error fetching disclaimer page for {lang}: {e}")
+    return None
 
 def normalize_slug(value):
     """Normalize titles/slugs by stripping accents and special chars.
@@ -321,22 +337,6 @@ def normalize_slug(value):
     value = re.sub(r'[^a-z0-9]+', '-', value)
     value = value.strip('-')
     return value or 'post'
-    try:
-        db = get_db()
-        page = db.execute('''
-            SELECT title, slug
-            FROM pages
-            WHERE language = ? AND slug = ? AND status = 'published'
-        ''', (lang, slug)).fetchone()
-        if page:
-            return {
-                'title': page['title'],
-                'slug': page['slug'],
-                'url': url_for('page_detail', lang=lang, slug=page['slug'])
-            }
-    except Exception as e:
-        print(f"Error fetching disclaimer page for {lang}: {e}")
-    return None
 
 def generate_captcha(lang):
     """Generate a simple addition captcha using number words per language."""
