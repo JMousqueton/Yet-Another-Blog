@@ -1062,15 +1062,12 @@ def migrate_database():
                     VALUES ('delete', old.id, old.title, old.content, COALESCE(old.excerpt, ''));
                 END
             ''')
-            # Populate from existing posts if the FTS table is empty
-            fts_count = cursor.execute('SELECT COUNT(*) FROM posts_fts').fetchone()[0]
-            if fts_count == 0:
-                cursor.execute('''
-                    INSERT INTO posts_fts(rowid, title, content, excerpt)
-                    SELECT id, title, content, COALESCE(excerpt, '') FROM posts
-                ''')
-                populated = cursor.execute('SELECT COUNT(*) FROM posts_fts').fetchone()[0]
-                print(f"✓ FTS5 index populated with {populated} post(s)")
+            # Rebuild the FTS index from `posts`. This is the canonical
+            # populate path for an external-content FTS5 table and is also
+            # self-healing if posts and the index drift out of sync. We
+            # cannot use SELECT COUNT(*) FROM posts_fts to detect emptiness
+            # because external-content tables read counts from `posts`.
+            cursor.execute("INSERT INTO posts_fts(posts_fts) VALUES('rebuild')")
             conn.commit()
             print("✓ FTS5 full-text search index ready")
         except Exception as fts_err:
