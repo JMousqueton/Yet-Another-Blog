@@ -228,7 +228,7 @@ def markdown_filter(text):
 # admin account is compromised.
 _SAFE_INLINE_TAGS = {"a", "br", "em", "i", "small", "span", "strong", "b", "u", "sub", "sup"}
 _SAFE_INLINE_ATTRS = {
-    "a": {"href", "title", "target", "rel"},
+    "a": {"href", "title", "target"},
     "span": {"class"},
 }
 
