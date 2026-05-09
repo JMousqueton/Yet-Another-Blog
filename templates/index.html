@@ -28,7 +28,7 @@
             <div class="col-lg-8 mx-auto text-center">
                 <h1 class="hero-title">{{ blog_title or t.index.welcome }}</h1>
                 {% if blog_subtitle %}
-                <p class="hero-subtitle">{{ blog_subtitle }}</p>
+                <p class="hero-subtitle">{{ blog_subtitle|safe_inline|safe }}</p>
                 {% elif meta_description %}
                 <p class="hero-subtitle">{{ meta_description }}</p>
                 {% endif %}

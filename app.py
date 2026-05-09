@@ -222,6 +222,24 @@ def markdown_filter(text):
 
     return html
 
+# Inline-formatting sanitizer for admin-set strings like blog_subtitle.
+# Lets common formatting tags through (<br>, <strong>, <em>, <small>, <span>,
+# <a>) but blocks <script>, event handlers, and javascript: URLs even if an
+# admin account is compromised.
+_SAFE_INLINE_TAGS = {"a", "br", "em", "i", "small", "span", "strong", "b", "u", "sub", "sup"}
+_SAFE_INLINE_ATTRS = {
+    "a": {"href", "title", "target", "rel"},
+    "span": {"class"},
+}
+
+@app.template_filter('safe_inline')
+def safe_inline_filter(text):
+    """Sanitize an admin-set string while preserving inline HTML formatting."""
+    if not text:
+        return ''
+    return nh3.clean(str(text), tags=_SAFE_INLINE_TAGS, attributes=_SAFE_INLINE_ATTRS)
+
+
 # Word count filter for Jinja2 templates
 @app.template_filter('wordcount')
 def wordcount_filter(text):
