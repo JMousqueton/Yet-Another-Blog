@@ -650,6 +650,9 @@ textarea.form-control {
         
         fetch('/admin/api/import-database', {
             method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
             body: formData
         })
         .then(response => response.json())

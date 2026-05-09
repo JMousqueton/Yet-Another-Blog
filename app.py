@@ -12,6 +12,11 @@ import os
 from dotenv import load_dotenv
 from functools import wraps
 from PIL import Image, ImageDraw, ImageFont
+import warnings
+# Reject images that decode to more than ~25 megapixels to prevent decompression-bomb DoS.
+# Also promote Pillow's "approaching limit" warning to an exception so we never decode huge images.
+Image.MAX_IMAGE_PIXELS = 25_000_000
+warnings.simplefilter('error', Image.DecompressionBombWarning)
 import io
 import markdown
 import nh3
@@ -24,10 +29,54 @@ import re
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import pyotp
+import time
 import qrcode
 import base64
 import random
 import unicodedata
+from urllib.parse import urlparse
+
+
+def _verify_totp_no_replay(db, user, code):
+    """Verify a TOTP code with replay protection.
+
+    Accepts the current 30s step ± 1, but only when the matching step is
+    strictly greater than the last step previously used by this user. The
+    matched step is persisted so the same code can never be used twice.
+    """
+    if not code or not user or not user['totp_secret']:
+        return False
+    code = code.strip()
+    if not code.isdigit():
+        return False
+    totp = pyotp.TOTP(user['totp_secret'])
+    current_step = int(time.time()) // 30
+    last_step = user['last_totp_step'] if 'last_totp_step' in user.keys() else 0
+    last_step = last_step or 0
+    for step in (current_step - 1, current_step, current_step + 1):
+        if step <= last_step:
+            continue
+        if pyotp.utils.strings_equal(totp.at(step * 30), code):
+            db.execute('UPDATE authors SET last_totp_step = ? WHERE id = ?', (step, user['id']))
+            db.commit()
+            return True
+    return False
+
+
+def _safe_redirect(target, fallback):
+    """Redirect to target only if it stays on this host; otherwise use fallback.
+
+    Prevents open-redirect / phishing chains via attacker-controlled Referer or
+    `next` parameters. Treats relative URLs (no netloc) as same-origin.
+    """
+    if target:
+        try:
+            parsed = urlparse(target)
+            if not parsed.netloc or parsed.netloc == request.host:
+                return redirect(target)
+        except Exception:
+            pass
+    return redirect(fallback)
 
 # Load environment variables
 load_dotenv()
@@ -39,10 +88,17 @@ _DUMMY_HASH = generate_password_hash('__dummy_timing_protection__')
 app = Flask(__name__)
 # Trust proxy headers for real client IP and scheme (1 proxy hop)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-this')
+
+_SECRET_KEY = os.getenv('SECRET_KEY')
+if not _SECRET_KEY or _SECRET_KEY == 'dev-secret-key-change-this':
+    raise RuntimeError(
+        "SECRET_KEY is not set. Define a strong, random SECRET_KEY in your environment "
+        "(e.g. `python -c 'import secrets; print(secrets.token_urlsafe(64))'`)."
+    )
+app.config['SECRET_KEY'] = _SECRET_KEY
 app.config['APP_ID'] = os.getenv('APP_ID', 'multilingual-blog')
 app.config['APP_NAME'] = os.getenv('APP_NAME', 'My Multilingual Blog')
-app.config['WTF_CSRF_TIME_LIMIT'] = None  # CSRF tokens don't expire
+# CSRF tokens expire after 1 hour (Flask-WTF default).
 
 # Session cookie security
 app.config['SESSION_COOKIE_SECURE'] = not app.debug  # HTTPS only in production
@@ -64,23 +120,23 @@ limiter = Limiter(
 @app.after_request
 def add_security_headers(response):
     """Add security headers to prevent XSS, clickjacking, etc."""
-    # Content Security Policy
+    # Content Security Policy. 'unsafe-inline' for scripts is still required by
+    # several inline <script> blocks in the templates; 'unsafe-eval' has been
+    # dropped — no bundled code needs it.
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://platform.twitter.com https://stats.mousqueton.io; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://platform.twitter.com https://stats.mousqueton.io; "
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; "
         "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
         "img-src 'self' data: https:; "
         "connect-src 'self' https://cdn.jsdelivr.net https://platform.twitter.com https://stats.mousqueton.io; "
-        "frame-src https://platform.twitter.com; "
+        "frame-src https://platform.twitter.com https://www.youtube.com https://www.youtube-nocookie.com; "
         "frame-ancestors 'none';"
     )
-    # Prevent MIME sniffing
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    # Prevent clickjacking
     response.headers['X-Frame-Options'] = 'DENY'
-    # Enable XSS filter
-    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=()'
     # Force HTTPS (when in production)
     if not app.debug:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
@@ -237,6 +293,24 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 def allowed_file(filename):
     """Check if file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def _safe_open_image(source):
+    """Open an image from a file path or stream, refusing decompression bombs.
+
+    Raises ValueError (caller should flash an error and abort) when the source
+    is not a valid image, exceeds Image.MAX_IMAGE_PIXELS, or fails Pillow's
+    integrity verification.
+    """
+    try:
+        img = Image.open(source)
+        # Force header decode now so format/size are populated before we re-open.
+        img.load()
+        return img
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning):
+        raise ValueError('Image too large (decompression-bomb protection)')
+    except Exception as e:
+        raise ValueError(f'Invalid image: {e}')
+
 
 def _prepare_image(img, max_width=None, max_size=None):
     """Flatten transparency and optionally resize an image, returning an RGB copy."""
@@ -405,7 +479,7 @@ def save_author_image(file, author_id):
     if not allowed_file(file.filename):
         return None
     try:
-        img = _prepare_image(Image.open(file.stream), max_size=(400, 400))
+        img = _prepare_image(_safe_open_image(file.stream), max_size=(400, 400))
         filename = f'author_{author_id}.webp'
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         _save_webp(img, filepath)
@@ -767,6 +841,11 @@ def migrate_database():
             cursor.execute("ALTER TABLE authors ADD COLUMN totp_enabled INTEGER DEFAULT 0")
             conn.commit()
             print("✓ Added totp_enabled column to authors table")
+
+        if 'last_totp_step' not in columns:
+            cursor.execute("ALTER TABLE authors ADD COLUMN last_totp_step INTEGER DEFAULT 0")
+            conn.commit()
+            print("✓ Added last_totp_step column to authors table")
         
         # Check if featured_image column exists in posts table
         cursor.execute("PRAGMA table_info(posts)")
@@ -928,10 +1007,72 @@ def migrate_database():
             print("✓ Removed deprecated excerpt column from pages table")
 
         conn.commit()
-        
+
+        # FTS5 full-text search index
+        try:
+            cursor.execute('''
+                CREATE VIRTUAL TABLE IF NOT EXISTS posts_fts USING fts5(
+                    title,
+                    content,
+                    excerpt,
+                    content='posts',
+                    content_rowid='id',
+                    tokenize='unicode61'
+                )
+            ''')
+            # Triggers to keep the FTS index in sync with the posts table
+            cursor.execute('''
+                CREATE TRIGGER IF NOT EXISTS posts_fts_ai
+                AFTER INSERT ON posts BEGIN
+                    INSERT INTO posts_fts(rowid, title, content, excerpt)
+                    VALUES (new.id, new.title, new.content, COALESCE(new.excerpt, ''));
+                END
+            ''')
+            cursor.execute('''
+                CREATE TRIGGER IF NOT EXISTS posts_fts_au
+                AFTER UPDATE ON posts BEGIN
+                    INSERT INTO posts_fts(posts_fts, rowid, title, content, excerpt)
+                    VALUES ('delete', old.id, old.title, old.content, COALESCE(old.excerpt, ''));
+                    INSERT INTO posts_fts(rowid, title, content, excerpt)
+                    VALUES (new.id, new.title, new.content, COALESCE(new.excerpt, ''));
+                END
+            ''')
+            cursor.execute('''
+                CREATE TRIGGER IF NOT EXISTS posts_fts_ad
+                AFTER DELETE ON posts BEGIN
+                    INSERT INTO posts_fts(posts_fts, rowid, title, content, excerpt)
+                    VALUES ('delete', old.id, old.title, old.content, COALESCE(old.excerpt, ''));
+                END
+            ''')
+            # Populate from existing posts if the FTS table is empty
+            fts_count = cursor.execute('SELECT COUNT(*) FROM posts_fts').fetchone()[0]
+            if fts_count == 0:
+                cursor.execute('''
+                    INSERT INTO posts_fts(rowid, title, content, excerpt)
+                    SELECT id, title, content, COALESCE(excerpt, '') FROM posts
+                ''')
+                populated = cursor.execute('SELECT COUNT(*) FROM posts_fts').fetchone()[0]
+                print(f"✓ FTS5 index populated with {populated} post(s)")
+            conn.commit()
+            print("✓ FTS5 full-text search index ready")
+        except Exception as fts_err:
+            print(f"FTS5 not available, will fall back to LIKE search: {fts_err}")
+
         conn.close()
     except Exception as e:
         print(f"Migration info: {e}")
+
+def _fts_query(text: str) -> str:
+    """Convert user input into a safe FTS5 MATCH expression.
+
+    Each word becomes a prefix match (word*) and they are ANDed together,
+    so all words must appear somewhere in the document.
+    """
+    words = re.findall(r'\w+', text, re.UNICODE)
+    if not words:
+        return ''
+    return ' '.join(f'{w}*' for w in words)
+
 
 def calculate_reading_time(text):
     """Calculate reading time in minutes based on word count.
@@ -1157,6 +1298,8 @@ def purge_old_views():
         print(f"❌ Error purging old views: {e}")
 
 # Run database migrations on app startup
+_FTS5_AVAILABLE = False
+
 with app.app_context():
     try:
         migrate_database()
@@ -1169,6 +1312,12 @@ with app.app_context():
         except sqlite3.OperationalError:
             # Column already exists
             pass
+        # Verify FTS5 is functional
+        try:
+            db.execute("SELECT COUNT(*) FROM posts_fts")
+            _FTS5_AVAILABLE = True
+        except Exception:
+            _FTS5_AVAILABLE = False
     except Exception as e:
         print(f"Migration error: {e}")
 
@@ -1255,21 +1404,41 @@ def index(lang, page=1):
             featured_posts.append(post_dict)
     
     if search_query:
-        # Count total posts for pagination
-        total_count = db.execute('''
-            SELECT COUNT(*) as count FROM posts 
-            WHERE language = ? AND status = 'published' AND publish_date <= ?
-            AND (title LIKE ? OR content LIKE ?)
-        ''', (lang, now, f'%{search_query}%', f'%{search_query}%')).fetchone()['count']
-        
-        # Search in title and content
-        posts = db.execute('''
-            SELECT * FROM posts 
-            WHERE language = ? AND status = 'published' AND publish_date <= ?
-            AND (title LIKE ? OR content LIKE ?)
-            ORDER BY publish_date DESC
-            LIMIT ? OFFSET ?
-        ''', (lang, now, f'%{search_query}%', f'%{search_query}%', posts_per_page, offset)).fetchall()
+        fts_q = _fts_query(search_query)
+        if fts_q and _FTS5_AVAILABLE:
+            # FTS5: fast ranked full-text search
+            total_count = db.execute('''
+                SELECT COUNT(*) as count
+                FROM posts_fts f
+                JOIN posts p ON p.id = f.rowid
+                WHERE posts_fts MATCH ?
+                  AND p.language = ? AND p.status = 'published' AND p.publish_date <= ?
+            ''', (fts_q, lang, now)).fetchone()['count']
+
+            posts = db.execute('''
+                SELECT p.*
+                FROM posts_fts f
+                JOIN posts p ON p.id = f.rowid
+                WHERE posts_fts MATCH ?
+                  AND p.language = ? AND p.status = 'published' AND p.publish_date <= ?
+                ORDER BY bm25(posts_fts)
+                LIMIT ? OFFSET ?
+            ''', (fts_q, lang, now, posts_per_page, offset)).fetchall()
+        else:
+            # Fallback: LIKE search
+            total_count = db.execute('''
+                SELECT COUNT(*) as count FROM posts
+                WHERE language = ? AND status = 'published' AND publish_date <= ?
+                  AND (title LIKE ? OR content LIKE ?)
+            ''', (lang, now, f'%{search_query}%', f'%{search_query}%')).fetchone()['count']
+
+            posts = db.execute('''
+                SELECT * FROM posts
+                WHERE language = ? AND status = 'published' AND publish_date <= ?
+                  AND (title LIKE ? OR content LIKE ?)
+                ORDER BY publish_date DESC
+                LIMIT ? OFFSET ?
+            ''', (lang, now, f'%{search_query}%', f'%{search_query}%', posts_per_page, offset)).fetchall()
     else:
         # Count total posts for pagination
         total_count = db.execute('''
@@ -1322,6 +1491,50 @@ def index(lang, page=1):
                          blog_subtitle=blog_subtitle,
                          max=max,
                          min=min)
+
+
+@app.route('/api/search-suggest')
+@limiter.limit("60 per minute")
+def search_suggest():
+    """Return up to 6 post suggestions as JSON for the autocomplete dropdown."""
+    q = request.args.get('q', '').strip()
+    lang = request.args.get('lang', DEFAULT_LANGUAGE)
+
+    if len(q) < 2:
+        return jsonify([])
+    if lang not in LANGUAGES:
+        lang = DEFAULT_LANGUAGE
+
+    db = get_db()
+    now = datetime.now().isoformat()
+
+    try:
+        if _FTS5_AVAILABLE:
+            fts_q = _fts_query(q)
+            if not fts_q:
+                return jsonify([])
+            rows = db.execute('''
+                SELECT p.title, p.slug
+                FROM posts_fts f
+                JOIN posts p ON p.id = f.rowid
+                WHERE posts_fts MATCH ?
+                  AND p.language = ? AND p.status = 'published' AND p.publish_date <= ?
+                ORDER BY bm25(posts_fts)
+                LIMIT 6
+            ''', (fts_q, lang, now)).fetchall()
+        else:
+            rows = db.execute('''
+                SELECT title, slug FROM posts
+                WHERE language = ? AND status = 'published' AND publish_date <= ?
+                  AND title LIKE ?
+                ORDER BY publish_date DESC
+                LIMIT 6
+            ''', (lang, now, f'%{q}%')).fetchall()
+
+        return jsonify([{'title': r['title'], 'slug': r['slug']} for r in rows])
+    except Exception:
+        return jsonify([])
+
 
 @app.route('/<lang>/post/<slug>')
 def post_detail(lang, slug):
@@ -1424,9 +1637,9 @@ def post_detail(lang, slug):
     
     # Get reaction counts and user's reaction
     reaction_counts = get_reaction_counts(post['id'])
-    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
-    if ip_address and ',' in ip_address:
-        ip_address = ip_address.split(',')[0].strip()
+    # ProxyFix(x_for=1) already populates request.remote_addr from the trusted
+    # proxy; reading X-Forwarded-For directly would let any client spoof their IP.
+    ip_address = request.remote_addr
     user_reaction = get_user_reaction(post['id'], ip_address)
     
     author_tag = TRANSLATIONS.get(lang, TRANSLATIONS['en']).get('post', {}).get('author_label', 'Author')
@@ -1475,7 +1688,7 @@ def admin_bulk_comment_action():
     comment_ids = request.form.getlist('comment_ids')
     if not comment_ids:
         flash('No comments selected.', 'warning')
-        return redirect(request.referrer or url_for('admin_comments'))
+        return _safe_redirect(request.referrer, url_for('admin_comments'))
     db = get_db()
     placeholders = ','.join(['?'] * len(comment_ids))
     if action == 'approve':
@@ -1488,7 +1701,7 @@ def admin_bulk_comment_action():
         flash(f"Deleted {len(comment_ids)} comment(s).", 'success')
     else:
         flash('Invalid action.', 'danger')
-    return redirect(request.referrer or url_for('admin_comments'))
+    return _safe_redirect(request.referrer, url_for('admin_comments'))
 
 
 
@@ -1648,10 +1861,8 @@ def submit_reaction(lang, slug):
     if not post:
         return jsonify({'success': False, 'error': 'Post not found'}), 404
 
-    # Get user's IP address
-    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
-    if ip_address and ',' in ip_address:
-        ip_address = ip_address.split(',')[0].strip()
+    # Get user's IP address (ProxyFix already trusts X-Forwarded-For from the reverse proxy)
+    ip_address = request.remote_addr
 
     try:
         # Check if user already voted on this post
@@ -1843,6 +2054,7 @@ def page_detail_amp(lang, slug):
 
 
 @app.route('/<lang>/contact', methods=['GET', 'POST'])
+@limiter.limit('3 per hour; 10 per day', methods=['POST'])
 def contact(lang):
     """Contact form per language, stores messages for admins."""
     if lang not in LANGUAGES:
@@ -2303,8 +2515,7 @@ def admin_2fa_verify():
         user = db.execute('SELECT * FROM authors WHERE id = ?', (session['pending_2fa_user_id'],)).fetchone()
         
         if user and user['totp_secret']:
-            totp = pyotp.TOTP(user['totp_secret'])
-            if totp.verify(code, valid_window=1):
+            if _verify_totp_no_replay(db, user, code):
                 # 2FA successful — save pending data, then clear the session
                 # entirely to regenerate the session ID and prevent session fixation.
                 user_id   = session['pending_2fa_user_id']
@@ -2325,9 +2536,9 @@ def admin_2fa_verify():
     
     return render_template('admin/2fa_verify.html')
 
-@app.route('/admin/logout')
+@app.route('/admin/logout', methods=['POST'])
 def admin_logout():
-    """Logout admin user."""
+    """Logout admin user. POST + CSRF to prevent forced-logout via <img>/link."""
     session.clear()
     flash('Successfully logged out', 'success')
     return redirect(url_for('admin_login'))
@@ -2397,10 +2608,9 @@ def admin_2fa_setup():
         
         elif action == 'disable':
             verify_code = request.form.get('code', '').strip()
-            
+
             if user['totp_secret']:
-                totp = pyotp.TOTP(user['totp_secret'])
-                if totp.verify(verify_code, valid_window=1):
+                if _verify_totp_no_replay(db, user, verify_code):
                     db.execute('''
                         UPDATE authors
                         SET totp_secret = NULL, totp_enabled = 0
@@ -2620,7 +2830,7 @@ def admin_mark_contact_unread(message_id):
     flash('Message marked as unread', 'success')
     ref = request.referrer or ''
     if '/admin/contact-messages' in ref:
-        return redirect(ref)
+        return _safe_redirect(ref, url_for('admin_contact_messages'))
     return redirect(url_for('admin_contact_messages'))
 
 
@@ -2686,8 +2896,7 @@ def admin_approve_comment(comment_id):
         else:
             flash('Comment not found', 'error')
 
-    ref = request.referrer or url_for('admin_comments')
-    return redirect(ref)
+    return _safe_redirect(request.referrer, url_for('admin_comments'))
 
 
 @app.route('/admin/comments/<int:comment_id>/delete', methods=['POST'])
@@ -2701,8 +2910,7 @@ def admin_delete_comment(comment_id):
         flash('Comment deleted', 'success')
     else:
         flash('Comment not found', 'error')
-    ref = request.referrer or url_for('admin_comments')
-    return redirect(ref)
+    return _safe_redirect(request.referrer, url_for('admin_comments'))
 
 @app.route('/admin/posts/delete/<int:post_id>', methods=['POST'])
 @login_required
@@ -2962,7 +3170,18 @@ def admin_new_post():
         existing = db.execute('''
             SELECT * FROM posts WHERE slug = ? AND language = ?
         ''', (slug, language)).fetchone()
-        
+
+        # Block silently overwriting another author's post via slug collision.
+        if existing and not is_admin_user and existing['author'] != current_author:
+            flash('This slug is already taken. Please choose another.', 'error')
+            return render_template('admin/new_post.html',
+                                 languages=LANGUAGES,
+                                 authors=authors_list,
+                                 current_user=session.get('user_name'),
+                                 form_data=request.form,
+                                 form_enable_comments=enable_comments,
+                                 global_comments_on=comments_global_on)
+
         if existing:
             # If the post already exists (e.g., a draft), update it with new data instead of creating a duplicate
             try:
@@ -2975,7 +3194,7 @@ def admin_new_post():
                         filepath = os.path.join('static', 'uploads', filename)
                         os.makedirs(os.path.join('static', 'uploads'), exist_ok=True)
                         try:
-                            img = _prepare_image(Image.open(file.stream), max_width=1200)
+                            img = _prepare_image(_safe_open_image(file.stream), max_width=1200)
                             _save_webp(img, filepath)
                             featured_image = filename
                         except Exception as e:
@@ -3011,15 +3230,15 @@ def admin_new_post():
                     filepath = os.path.join('static', 'uploads', filename)
                     os.makedirs(os.path.join('static', 'uploads'), exist_ok=True)
                     try:
-                        img = _prepare_image(Image.open(file.stream), max_width=1200)
+                        img = _prepare_image(_safe_open_image(file.stream), max_width=1200)
                         _save_webp(img, filepath)
                         featured_image = filename
                     except Exception as e:
                         flash(f'Error processing image: {str(e)}', 'warning')
-            
+
             # Handle featured checkbox
             featured = 1 if request.form.get('featured') else 0
-            
+
             db.execute('''
                 INSERT INTO posts (title, slug, content, excerpt, language, status, publish_date, author, featured_image, featured, enable_comments, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -3190,17 +3409,17 @@ def admin_edit_post(post_id):
                     filepath = os.path.join('static', 'uploads', filename)
                     os.makedirs(os.path.join('static', 'uploads'), exist_ok=True)
                     try:
-                        img = _prepare_image(Image.open(file.stream), max_width=1200)
+                        img = _prepare_image(_safe_open_image(file.stream), max_width=1200)
                         _save_webp(img, filepath)
                         featured_image = filename
                     except Exception as e:
                         flash(f'Error processing image: {str(e)}', 'warning')
-            
+
             # Handle featured checkbox
             featured = 1 if request.form.get('featured') else 0
-            
+
             db.execute('''
-                UPDATE posts SET 
+                UPDATE posts SET
                     title = ?, slug = ?, content = ?, excerpt = ?, 
                     language = ?, status = ?, publish_date = ?, author = ?, 
                     featured_image = ?, featured = ?, enable_comments = ?, updated_at = ?
@@ -3330,7 +3549,7 @@ def admin_media():
                     filepath = os.path.join(uploads_dir, filename)
                     if ext in {'jpg', 'jpeg', 'png', 'gif', 'webp'}:
                         # Save and optimize image
-                        img = Image.open(file.stream)
+                        img = _safe_open_image(file.stream)
                         if img.mode == 'RGBA':
                             img = img.convert('RGB')
                         max_width = 1200
@@ -3341,10 +3560,19 @@ def admin_media():
                         img.save(filepath, 'JPEG', quality=85, optimize=True)
                         flash('Image uploaded successfully!', 'success')
                     elif ext == 'pdf':
+                        # Verify PDF magic bytes before trusting the .pdf extension.
+                        head = file.stream.read(5)
+                        file.stream.seek(0)
+                        if head != b'%PDF-':
+                            flash('Invalid PDF file.', 'error')
+                            return redirect(url_for('admin_media'))
                         file.save(filepath)
-                        # Extract PDF metadata
+                        # Extract PDF metadata (PyPDF2 is deprecated; use the maintained pypdf fork).
                         try:
-                            from PyPDF2 import PdfReader
+                            try:
+                                from pypdf import PdfReader
+                            except ImportError:
+                                from PyPDF2 import PdfReader
                             reader = PdfReader(filepath)
                             info = reader.metadata or {}
                             num_pages = len(reader.pages)
@@ -3392,8 +3620,7 @@ def admin_media():
                 }
                 if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
                     try:
-                        from PIL import Image
-                        with Image.open(filepath) as img:
+                        with _safe_open_image(filepath) as img:
                             media['resolution'] = f"{img.width}x{img.height}"
                     except Exception as img_e:
                         print(f"Error reading image resolution: {img_e}")
@@ -3469,9 +3696,13 @@ def admin_new_author():
         if not all([name, email, password]):
             flash('Name, email, and password are required', 'error')
             return render_template('admin/new_author.html', form_data=request.form)
-        
+
+        if len(password) < 12:
+            flash('Password must be at least 12 characters long.', 'error')
+            return render_template('admin/new_author.html', form_data=request.form)
+
         db = get_db()
-        
+
         # Check if author already exists
         existing = db.execute('SELECT id FROM authors WHERE name = ? OR email = ?', (name, email)).fetchone()
         if existing:
@@ -3550,6 +3781,10 @@ def admin_edit_author(author_id):
             flash('An author with this name or email already exists', 'error')
             return render_template('admin/edit_author.html', author=author, form_data=request.form)
         
+        if password and len(password) < 12:
+            flash('Password must be at least 12 characters long.', 'error')
+            return render_template('admin/edit_author.html', author=author, form_data=request.form)
+
         # Update author
         try:
             if password:
@@ -3670,7 +3905,7 @@ def admin_settings():
                     try:
                         # If it's an image, convert to ICO
                         if file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                            img = Image.open(file.stream)
+                            img = _safe_open_image(file.stream)
                             # Convert any mode to RGB for compatibility
                             if img.mode != 'RGB':
                                 img = img.convert('RGB')
@@ -3784,7 +4019,6 @@ def api_purge_old_views():
 @login_required
 @admin_required
 @limiter.limit('5 per day')  # Prevent abuse of database imports
-@csrf.exempt
 def api_import_database():
     """Import database from JSON backup."""
     try:
@@ -3972,7 +4206,6 @@ def api_post_stats(post_id):
 @app.route('/admin/api/autosave', methods=['POST'])
 @login_required
 @limiter.limit('60 per minute')  # Allow frequent autosaves
-@csrf.exempt
 def api_autosave():
     """Auto-save post draft to prevent data loss."""
     try:
@@ -4085,7 +4318,7 @@ if __name__ == '__main__':
     # Get configuration from environment
     host = os.getenv('HOST', '0.0.0.0')
     port = int(os.getenv('PORT', '5000'))
-    debug = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+    debug = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
     
     print(f"🚀 Starting {app.config['APP_NAME']} (ID: {app.config['APP_ID']})")
     print(f"📍 Server: http://{host}:{port}")
