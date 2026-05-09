@@ -1342,10 +1342,11 @@ with app.app_context():
 @app.before_request
 def before_request():
     """Handle language detection and routing with English fallback."""
-    # Skip for static files, SEO files, admin routes, set-language route, and preview links
-    if (request.path.startswith('/static') or 
+    # Skip for static files, SEO files, admin/api routes, set-language route, and preview links
+    if (request.path.startswith('/static') or
         request.path.startswith('/set-language') or
         request.path.startswith('/admin') or
+        request.path.startswith('/api/') or
         request.path.startswith('/preview/') or
         request.path in ['/sitemap.xml', '/robots.txt', '/rss', '/rss/']):
         return
