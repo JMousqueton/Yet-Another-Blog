@@ -52,14 +52,14 @@
     {% endif %}
     
     <style>
-        /* Code Syntax Highlighting — terminal green theme */
+        /* Code Syntax Highlighting */
         .highlight {
-            background: #0d110d;
+            background: #1e1e1e;
             border-radius: 8px;
             padding: 1rem;
             margin: 1.5rem 0;
             overflow-x: auto;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 255, 65, 0.08);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
             position: relative;
         }
 
@@ -74,9 +74,9 @@
             font-size: .75rem;
             font-weight: 600;
             font-family: inherit;
-            color: #2a7a45;
-            background: rgba(0, 255, 65, .06);
-            border: 1px solid rgba(0, 255, 65, .18);
+            color: #94a3b8;
+            background: rgba(255, 255, 255, .07);
+            border: 1px solid rgba(255, 255, 255, .12);
             border-radius: .4rem;
             cursor: pointer;
             transition: color .2s ease, background .2s ease, border-color .2s ease;
@@ -85,37 +85,26 @@
         }
 
         .copy-code-btn:hover {
-            color: #33ff66;
-            background: rgba(0, 255, 65, .13);
-            border-color: rgba(0, 255, 65, .35);
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, .13);
+            border-color: rgba(255, 255, 255, .22);
         }
 
         .copy-code-btn.copied {
-            color: #00ff41;
-            border-color: rgba(0, 255, 65, .45);
-            background: rgba(0, 255, 65, .10);
+            color: #4ade80;
+            border-color: rgba(74, 222, 128, .35);
+            background: rgba(74, 222, 128, .08);
         }
 
         .highlight pre {
             margin: 0;
-            color: #00ff41;
+            color: #d4d4d4;
             font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
             font-size: 0.9rem;
             line-height: 1.6;
         }
 
-        /* Force all Pygments token spans to terminal green — true monochrome terminal style */
-        .highlight pre *         { color: #00ff41 !important; background: transparent !important; font-style: normal; }
-        /* Subtle differentiators that still read as "green terminal" */
-        .highlight .c,
-        .highlight .c1,
-        .highlight .cm           { color: #1a7a35 !important; font-style: italic; } /* comments: dim */
-        .highlight .k,
-        .highlight .kd,
-        .highlight .kn,
-        .highlight .kr,
-        .highlight .kt           { color: #66ffaa !important; font-weight: bold; }  /* keywords: bright */
-        .highlight .err          { color: #ff4444 !important; }                     /* errors: keep red */
+        .highlight pre * { background: transparent !important; }
 
         .highlight code {
             background: transparent;
@@ -126,13 +115,13 @@
 
         /* Inline code */
         code {
-            background: #0a0f0a;
+            background: #f0f0f0;
             padding: 0.2em 0.4em;
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
             font-size: 0.9em;
-            color: #00ff41;
-            border: 1px solid rgba(0, 255, 65, .30);
+            color: #1a1a1a;
+            border: 1px solid #d0d0d0;
         }
         
         /* Embed Styles */
