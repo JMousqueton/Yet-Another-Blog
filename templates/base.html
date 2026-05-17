@@ -28,9 +28,6 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/' + (template_css or global_template_css or 'default.css')) }}">
     
-    <!-- Syntax Highlighting (Pygments) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" crossorigin="anonymous">
-    
     <!-- RSS Feed -->
     <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/{{ lang }}/rss">
     
@@ -55,14 +52,14 @@
     {% endif %}
     
     <style>
-        /* Code Syntax Highlighting */
+        /* Code Syntax Highlighting — terminal green theme */
         .highlight {
-            background: #1e1e1e;
+            background: #0d110d;
             border-radius: 8px;
             padding: 1rem;
             margin: 1.5rem 0;
             overflow-x: auto;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 255, 65, 0.08);
             position: relative;
         }
 
@@ -77,9 +74,9 @@
             font-size: .75rem;
             font-weight: 600;
             font-family: inherit;
-            color: #94a3b8;
-            background: rgba(255, 255, 255, .07);
-            border: 1px solid rgba(255, 255, 255, .12);
+            color: #2a7a45;
+            background: rgba(0, 255, 65, .06);
+            border: 1px solid rgba(0, 255, 65, .18);
             border-radius: .4rem;
             cursor: pointer;
             transition: color .2s ease, background .2s ease, border-color .2s ease;
@@ -88,41 +85,57 @@
         }
 
         .copy-code-btn:hover {
-            color: #e2e8f0;
-            background: rgba(255, 255, 255, .13);
-            border-color: rgba(255, 255, 255, .22);
+            color: #33ff66;
+            background: rgba(0, 255, 65, .13);
+            border-color: rgba(0, 255, 65, .35);
         }
 
         .copy-code-btn.copied {
-            color: #4ade80;
-            border-color: rgba(74, 222, 128, .35);
-            background: rgba(74, 222, 128, .08);
+            color: #00ff41;
+            border-color: rgba(0, 255, 65, .45);
+            background: rgba(0, 255, 65, .10);
         }
-        
+
         .highlight pre {
             margin: 0;
-            color: #d4d4d4;
+            color: #33ff66;
             font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
             font-size: 0.9rem;
             line-height: 1.6;
         }
-        
+
+        /* Override all Pygments token colors with terminal-green shades */
+        .highlight .hll, .highlight span { color: inherit; }
+        .highlight .k,  .highlight .kd, .highlight .kn,
+        .highlight .kp, .highlight .kr, .highlight .kt  { color: #66ffaa; font-weight: bold; } /* keywords */
+        .highlight .s,  .highlight .s1, .highlight .s2,
+        .highlight .se, .highlight .sh, .highlight .si,
+        .highlight .sx, .highlight .sr, .highlight .ss  { color: #22cc55; }  /* strings */
+        .highlight .c,  .highlight .c1, .highlight .cm,
+        .highlight .cp, .highlight .cs                  { color: #1a6633; font-style: italic; } /* comments */
+        .highlight .mi, .highlight .mf, .highlight .mh,
+        .highlight .mo, .highlight .il                  { color: #99ffcc; }  /* numbers */
+        .highlight .na, .highlight .nb, .highlight .nc,
+        .highlight .nd, .highlight .ne, .highlight .nf  { color: #55ee88; }  /* names */
+        .highlight .o,  .highlight .ow                  { color: #44dd77; }  /* operators */
+        .highlight .err                                  { color: #ff4444; background: transparent; } /* errors */
+
         .highlight code {
             background: transparent;
             padding: 0;
             color: inherit;
             border: none;
         }
-        
+
         /* Inline code */
         code {
-            background: #f5f5f5;
+            background: #0d110d;
             padding: 0.2em 0.4em;
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
             font-size: 0.9em;
-            color: #c7254e;
-            border: 1px solid #e1e1e8;
+            color: #33ff66;
+            border: 1px solid rgba(0, 255, 65, .20);
         }
         
         /* Embed Styles */
