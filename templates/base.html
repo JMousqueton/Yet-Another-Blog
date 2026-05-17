@@ -98,27 +98,24 @@
 
         .highlight pre {
             margin: 0;
-            color: #33ff66;
+            color: #00ff41;
             font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
             font-size: 0.9rem;
             line-height: 1.6;
         }
 
-        /* Override all Pygments token colors with terminal-green shades */
-        .highlight .hll, .highlight span { color: inherit; }
-        .highlight .k,  .highlight .kd, .highlight .kn,
-        .highlight .kp, .highlight .kr, .highlight .kt  { color: #66ffaa; font-weight: bold; } /* keywords */
-        .highlight .s,  .highlight .s1, .highlight .s2,
-        .highlight .se, .highlight .sh, .highlight .si,
-        .highlight .sx, .highlight .sr, .highlight .ss  { color: #22cc55; }  /* strings */
-        .highlight .c,  .highlight .c1, .highlight .cm,
-        .highlight .cp, .highlight .cs                  { color: #1a6633; font-style: italic; } /* comments */
-        .highlight .mi, .highlight .mf, .highlight .mh,
-        .highlight .mo, .highlight .il                  { color: #99ffcc; }  /* numbers */
-        .highlight .na, .highlight .nb, .highlight .nc,
-        .highlight .nd, .highlight .ne, .highlight .nf  { color: #55ee88; }  /* names */
-        .highlight .o,  .highlight .ow                  { color: #44dd77; }  /* operators */
-        .highlight .err                                  { color: #ff4444; background: transparent; } /* errors */
+        /* Force all Pygments token spans to terminal green — true monochrome terminal style */
+        .highlight pre *         { color: #00ff41 !important; background: transparent !important; font-style: normal; }
+        /* Subtle differentiators that still read as "green terminal" */
+        .highlight .c,
+        .highlight .c1,
+        .highlight .cm           { color: #1a7a35 !important; font-style: italic; } /* comments: dim */
+        .highlight .k,
+        .highlight .kd,
+        .highlight .kn,
+        .highlight .kr,
+        .highlight .kt           { color: #66ffaa !important; font-weight: bold; }  /* keywords: bright */
+        .highlight .err          { color: #ff4444 !important; }                     /* errors: keep red */
 
         .highlight code {
             background: transparent;
@@ -129,13 +126,13 @@
 
         /* Inline code */
         code {
-            background: #0d110d;
+            background: #0a0f0a;
             padding: 0.2em 0.4em;
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
             font-size: 0.9em;
-            color: #33ff66;
-            border: 1px solid rgba(0, 255, 65, .20);
+            color: #00ff41;
+            border: 1px solid rgba(0, 255, 65, .30);
         }
         
         /* Embed Styles */
