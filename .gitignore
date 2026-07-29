@@ -17,3 +17,4 @@ static/authors/*.jpg
 static/logo.png
 static/uploads/*.webp
 static/uploads/og/
+./claude/

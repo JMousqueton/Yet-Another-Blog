@@ -127,7 +127,9 @@ def add_security_headers(response):
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://platform.twitter.com https://stats.mousqueton.io; "
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; "
-        "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        # maxcdn.bootstrapcdn.com is required by EasyMDE: its stylesheet embeds
+        # Font Awesome 4.7 @font-face rules that point there.
+        "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; "
         "img-src 'self' data: https:; "
         "connect-src 'self' https://cdn.jsdelivr.net https://platform.twitter.com https://stats.mousqueton.io; "
         "frame-src https://platform.twitter.com https://www.youtube.com https://www.youtube-nocookie.com; "
