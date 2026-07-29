@@ -303,7 +303,16 @@
                 .replace(/^-+|-+$/g, '') || 'post';
             document.getElementById('slug').value = slug;
         }
-        
+
+        // Fill the slug from the title when the field is focused, so typing the
+        // title and clicking into Slug is enough. Only fires while the field is
+        // empty, so a slug you typed or tweaked by hand is never overwritten.
+        document.getElementById('slug').addEventListener('focus', function() {
+            if (!this.value.trim()) {
+                generateSlug();
+            }
+        });
+
         // Set publish date to now (UTC)
         function setNow() {
             const now = new Date();
